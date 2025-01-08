@@ -12,8 +12,11 @@ Import VectorNotations.
 Require Import Psatz.
 Open Scope R_scope.
 
+<<<<<<< HEAD
 Section Test.
 
+=======
+>>>>>>> fdf9286834f203b57b210182d39d7fad23797d1d
 Fixpoint fin_list (n : nat) : list (Fin.t n) :=
   match n with
   | 0 => []
@@ -1965,4 +1968,8 @@ Proof.
   Qed.
 
 
+<<<<<<< HEAD
 End Test.
+=======
+  
+>>>>>>> fdf9286834f203b57b210182d39d7fad23797d1d
