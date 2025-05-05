@@ -14,6 +14,9 @@ From Coq Require Import Logic.PropExtensionality.
 From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
+(* From Coq Require Import List. *)
+From Coq Require Import Vector.
+(* Import ListNotations. *)
 
 Module PHL.
 
@@ -500,6 +503,68 @@ Definition is_analytical (P : PAssertion) := forall ps1 ps2: Pstate,
 Definition is_analytical_pterm (t : Pterm) := forall ps1 ps2: Pstate, 
   snd ps1 = snd ps2 -> Pteval t ps1 = Pteval t ps2.
 
+(* -----------------Functions to define While rule ------------------------------ *)
+
+Fixpoint vector_to_conj (n : nat) (G : Vector.t Assertion n) : Assertion :=
+  match G with
+  | nil _ => (fun st : state => True)
+  | cons _ A n tl => (fun st : state => (A st) /\ (vector_to_conj _ tl) st) 
+end.
+
+Fixpoint vector_to_disj (n : nat) (G : Vector.t Assertion n) : Assertion :=
+  match G with
+  | nil _ => (fun st : state => False)
+  | cons _ A n tl => (fun st : state => (A st) \/ (vector_to_disj _ tl) st) 
+end.
+
+
+(* Fixpoint list_to_disj (G : list Assertion) : Assertion :=
+  match G with
+  | nil => (fun st : state => False)
+  | hd :: tl => (fun (st : state) => hd st \/ (list_to_disj tl) st)
+end.
+
+Fixpoint inner_conj (gamma : Assertion) (P : list R) : PAssertion :=
+  match P with
+  | nil => (fun ps => True)
+  | hd :: tl => (fun ps => (Rle (Pteval (Pint gamma) ps) hd) /\ ((inner_conj gamma tl) ps))
+end. *)
+
+Definition int_true_eq_one (gamma : Assertion) : PAssertion := {{ ((prob gamma) = 1) /\ ((prob gamma) = (prob true)) }}.
+
+Fixpoint convert_A_to_PA (m : nat) (G : Vector.t Assertion m) : (Vector.t PAssertion m) :=
+  match G with 
+  | (nil _) => (nil _)
+  | (cons _ _ _ tl) => cons _ (fun ps => True) _ (convert_A_to_PA _ tl)
+end.
+
+Definition head_vector (T : Type) (m : nat) (G : Vector.t T m) :=
+  match G in (Vector.t _ n) return (match n with
+                                      | O => unit
+                                      | S _ => T end) with
+  | (nil _) => tt
+  | (cons _ hd _ tl) => hd
+end.
+
+Definition tail_vector (T : Type) (m : nat) (G : Vector.t T m) :=
+  match G in (Vector.t _ n) return (match n with O => unit | S n' => Vector.t T n' end) with
+  | (nil _) => tt
+  | (cons _ hd _ tl) => tl
+end.
+
+Fixpoint inner_ineqs (m : nat) (G : Vector.t Assertion m) (P : Vector.t R m) : (Vector.t PAssertion m) :=
+  match m with
+  | O => (nil _)
+  | S n => cons _ (Rle (Pteval (Pint (head_vector Assertion (S n) G)) (head_vector R m P))) _ (inner_ineqs (tail_vector Assertion m G) (tail_vector R m P))
+end.
+
+Fixpoint inner_conj (m : nat) (gamma : Assertion) (P : Vector.t R m) : PAssertion :=
+  match P with
+  | nil _ => (fun ps => True)
+  | cons _ r m tl => (fun ps => (Rle (Pteval (Pint gamma) ps) r) /\ (inner_conj _ gamma tl) ps)
+end.
+Definition post_wh (m : nat) (beta gamma: Assertion) (P : Vector.t R m) (T : Vector.t R m) : PAssertion :=
+  fun ps => (inner_conj m gamma P) ps /\ (Rle (Pteval (Pint (~ beta /\ gamma))) )
 
 (* Hoare triples
  *)
@@ -529,7 +594,11 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
 
   | HAnd : forall (eta0 eta1 eta2 : PAssertion) (c : Cmd), hoare_triple eta0 c eta1 -> hoare_triple eta0 c eta2 -> hoare_triple eta0 c {{eta1 /\ eta2}}
   
-  | HOr : forall (eta0 eta1 eta2 : PAssertion) (c : Cmd), hoare_triple eta0 c eta2 -> hoare_triple eta1 c eta2 -> hoare_triple {{eta0 \/ eta1}} c eta2.
+  | HOr : forall (eta0 eta1 eta2 : PAssertion) (c : Cmd), hoare_triple eta0 c eta2 -> hoare_triple eta1 c eta2 -> hoare_triple {{eta0 \/ eta1}} c eta2
+  
+  | HWhile : forall (m : nat) (beta gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
+      (forall st, beta st -> (vector_to_disj m G) st) -> (forall (i : Fin.t m), hoare_triple (int_true_eq_one (Vector.nth G i)) s (fun ps => )) 
+      -> hoare_triple (fun ps => True) s (fun ps => True). 
   
 
 
@@ -617,7 +686,12 @@ Proof. intros.
                   symmetry. apply t_update_neq. symmetry. apply n. transitivity ((y !-> r1; (snd ps)) x). apply t_update_neq. symmetry. apply n.
                   symmetry. rewrite H11. apply t_update_neq. symmetry. apply n.
               ** rewrite H11. easy.
-Qed.   
+Qed.  
+
+Theorem helper1: forall (P Q R : PAssertion), 
+    {{(P /\ Q) /\ R}} = {{P /\ (Q /\ R)}}.
+Proof. intros. apply functional_extensionality. intros. simpl. apply propositional_extensionality. easy.
+Qed.
                       
 Definition trivial_measure: Measure := (fun A : Assertion => 0%R).
 Definition trivial_intp : Intp := (fun y : string => 0%R).
@@ -866,12 +940,12 @@ Proof. intros. eapply HIfThen.
           + apply pre2.
 Qed. 
 
-Theorem ifthen: forall (b y1 y2 z : string), {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) /\ (y1 = 0.5) /\ (y2 = 0) }}
+Theorem ifthen: forall (b y1 y2 z : string), {{ (((prob b) = 0.5) /\ (((prob (~ b)) = 0.5) /\ (y1 = 0.5))) /\ (y2 = 0) }}
                     <{
   if b then z := 1 else z := 2 end
  }> {{ (y1 + y2) = (prob (z = 1)) }}.
 Proof. intros. eapply HConseq.
-  + assert (H : PAImplies {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) /\ (y1 = 0.5) /\ (y2 = 0) }} {{((prob true) = 0.5 /\ (y1 = 0.5)) / (b) \ ((prob true) = 0.5 /\ (y2 = 0))}}).
+  + assert (H : PAImplies {{ (((prob b) = 0.5) /\ (((prob (~ b)) = 0.5) /\ (y1 = 0.5))) /\ (y2 = 0) }} {{((prob true) = 0.5 /\ (y1 = 0.5)) / (b) \ ((prob true) = 0.5 /\ (y2 = 0))}}).
     -  simpl. unfold PAImplies. intros. simpl. Locate "P / b \ Q" . unfold psfBpsf. Locate "P / B". unfold PAcondB. unfold Measure_cond_B. simpl.
         unfold PTerm_of_R. unfold PTerm_of_R in H. unfold CBoolexp_of_bexp in H. simpl in H. split.
       * split. simpl. replace (fun st : state => True /\ snd st b) with (fun st : state => snd st b). apply H.
@@ -883,10 +957,47 @@ Proof. intros. eapply HConseq.
   + apply ifthentest.
 Qed.
 
-Theorem helper1: forall (P Q R : PAssertion), 
-    {{(P /\ Q) /\ R}} = {{P /\ (Q /\ R)}}.
-Proof. intros. apply functional_extensionality. intros. simpl. apply propositional_extensionality. easy.
+Theorem trial: forall y : string, (y++"a")%string <> y.
+Proof. intros. apply String.eqb_neq. induction y. easy. simpl. rewrite IHy. destruct (Ascii.eqb a0 a0). reflexivity. reflexivity.
 Qed.
+
+Theorem intermediary: forall (b y1 z : string),  {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) /\ (y1 = 0.5)}}
+                    <{
+  if b then z := 1 else z := 2 end
+ }> {{ y1 = (prob (z = 1)) }}.
+Proof. intros. eapply HConseq.
+        assert (H1: forall (y2 : string), y2 <> y1 -> PAImplies ({{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) /\ (y1 = 0.5)}}) (eta_update_y_p ({{((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) /\ (y1 = 0.5)}}) (y2) (0%R))).
+        + intros. unfold PAImplies. intros. simpl. unfold eta_update_y_p. simpl. unfold CBoolexp_of_bexp. unfold PTerm_of_R. split. apply H0.
+          split. apply H0. transitivity ((snd ps) y1). apply t_update_neq. apply H. apply H0. 
+        + apply H1 with (y2 := (y1++"a")%string). apply trial.
+        + assert (H2: forall y2 : string, y2 <> y1 -> PAImplies (eta_update_y_p ({{ (y1 + y2) = (prob (z = 1)) }}) (y2) (Preal 0)) {{y1 = (prob (z = 1))}}).
+          * intros. unfold eta_update_y_p. unfold pstate_update. unfold Pteval. unfold PAImplies. intros. simpl. unfold PTermexp_of_pterm in H0. unfold Pteval in H0. simpl in H0.
+            unfold CTermexp_of_nat in H0. unfold CTermexp_of_nat. assert (H1: ((((y2 !-> 0; (snd ps)) y1) + ((y2 !-> 0; (snd ps)) y2))%R) = snd ps y1).
+            ** rewrite t_update_eq. rewrite t_update_neq. lra. easy.
+            ** rewrite <- H1. easy.
+          * apply H2 with (y2 := (y1++"a")%string). apply trial.
+        + eapply eliminate_y.
+          * easy.
+          * easy.
+          * apply ifthen with (b := b) (y1 := y1) (z := z) (y2 := (y1 ++ "a")%string).
+Qed.
+
+Theorem ifthenpretty1: forall (b z : string), {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5)}}
+      <{
+  if b then z := 1 else z := 2 end
+ }> {{ (prob (z = 1)) = 0.5 }}.
+Proof. intros. eapply HConseq.
+        assert (H1: forall (y1 : string), PAImplies ({{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5)}}) (eta_update_y_p ({{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5)}}) (y1) (0.5%R))).
+        + intros. unfold PAImplies. intros. simpl. unfold eta_update_y_p. simpl. unfold CBoolexp_of_bexp. unfold PTerm_of_R.
+          split. apply H. apply H.
+        + apply H1.
+        + assert (H2: forall (y1 : string), PAImplies (eta_update_y_p ({{y1 = (prob (z = 1))}}) (y1) (0.5%R)) ({{ (prob (z = 1)) = 0.5 }})).
+          * intros. unfold eta_update_y_p. simpl. unfold CTermexp_of_nat. unfold PTerm_of_R. unfold PAImplies. intros. rewrite t_update_eq in H.
+            symmetry. easy.
+          * apply H2. 
+        + eapply eliminate_y. easy. easy. rewrite helper1. apply intermediary with (b := b) (y1 := "a"%string) (z := z).
+Qed.
+
 
 Theorem ifthenpretty: forall (b y1 y2 z : string), y1<>y2 -> {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5)}}
       <{
@@ -1050,7 +1161,6 @@ Coercion Aexp_of_aexp : aexp >-> Aexp.
 
 
 Definition Aexp : Type := state -> nat.
-
 
 
 End PHL.
