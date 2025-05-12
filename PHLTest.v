@@ -15,7 +15,9 @@ From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
 (* From Coq Require Import List. *)
+Import Vector.VectorNotations.
 From Coq Require Import Vector.
+
 (* Import ListNotations. *)
 
 Module PHL.
@@ -259,6 +261,7 @@ Fixpoint Pteval (t : Pterm) (ps : Pstate): R :=
     | Psum p1 p2 => (Pteval p1 ps) + (Pteval p2 ps)
     | Pmult p1 p2 => (Pteval p1 ps) * (Pteval p2 ps)
 end.
+
 
 
 Definition PAssertion : Type := Pstate -> Prop.
@@ -532,6 +535,8 @@ end. *)
 
 Definition int_true_eq_one (gamma : Assertion) : PAssertion := {{ ((prob gamma) = 1) /\ ((prob gamma) = (prob true)) }}.
 
+Definition int_true_leq_R (gamma: Assertion) (r: R): PAssertion := {{ ((prob gamma) <= r) /\ ((prob gamma) = (prob true)) }}.
+
 Fixpoint convert_A_to_PA (m : nat) (G : Vector.t Assertion m) : (Vector.t PAssertion m) :=
   match G with 
   | (nil _) => (nil _)
@@ -552,6 +557,66 @@ Definition tail_vector (T : Type) (m : nat) (G : Vector.t T m) :=
   | (cons _ hd _ tl) => tl
 end.
 
+(* [asserts] [R] ---> [pterm <= R] (passert) *)
+
+
+Fixpoint zip {A B C: Type} {n : nat} (f: A->B-> C) (a : Vector.t A n) (b : Vector.t B n) : Vector.t C n :=
+match a in Vector.t _ n return Vector.t B n -> Vector.t C n  with
+| ha :: ta => fun b => (f ha (Vector.hd b)) :: zip f ta (Vector.tl b)
+| [] => fun _ => []
+end b.
+
+
+Definition zip_sum {n:nat} (a: Vector.t nat n) (b: Vector.t nat n) : (Vector.t nat n) :=
+  zip add a b
+.
+
+
+Definition zip_gamma_compare {n: nat} (op: Assertion -> R -> PAssertion)(gammas: Vector.t Assertion n) (rs: Vector.t R n) : Vector.t PAssertion n :=
+  zip (fun (g: Assertion) (r: R) =>  op g r) 
+    gammas rs .
+
+
+Definition gamma_leq := (fun (gamma: Assertion) (r: R) =>  (fun (st: Pstate) => ((( PTermexp_of_pterm (Pint gamma)) st) <= ((PTerm_of_R r) st))%R)).
+Definition gamma_geq := (fun (gamma: Assertion) (r: R) =>  (fun (st: Pstate) => ((( PTermexp_of_pterm (Pint gamma)) st) >= ((PTerm_of_R r) st))%R)).
+Definition gamma_eq := (fun (gamma: Assertion) (r: R) =>  (fun (st: Pstate) => ((( PTermexp_of_pterm (Pint gamma)) st) = ((PTerm_of_R r) st))%R)).
+
+
+Definition zip_gamma_leq {n: nat} (gammas: Vector.t Assertion n) (rs: Vector.t R n) : Vector.t PAssertion n :=
+  zip_gamma_compare gamma_leq gammas rs.
+Definition zip_gamma_geq {n: nat} (gammas: Vector.t Assertion n) (rs: Vector.t R n) : Vector.t PAssertion n :=
+  zip_gamma_compare gamma_geq gammas rs.
+Definition zip_gamma_eq {n: nat} (gammas: Vector.t Assertion n) (rs: Vector.t R n) : Vector.t PAssertion n :=
+  zip_gamma_compare gamma_eq gammas rs.
+
+
+
+Fixpoint PAssertion_conj {n: nat} (vec: Vector.t PAssertion n) : PAssertion := 
+  match vec with
+  | [] => (fun ps => True)
+  | hd:: tl => (fun ps => (hd ps) /\ ((PAssertion_conj tl) ps))
+end.
+
+Definition inner_conj_leq {n: nat} (gammas: Vector.t Assertion n) (rs: Vector.t R n) : PAssertion :=
+  PAssertion_conj (zip_gamma_leq gammas rs).
+
+
+Definition antecedent_leq {n: nat} (i: Fin.t n) (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n) : PAssertion :=
+    fun ps => ((inner_conj_leq gammas (Vector.nth r2 i)) ps) /\ ((gamma_leq (\{ (~beta) /\ gamma \}) (Vector.nth r1 i) ) ps) . 
+
+
+Fixpoint vector_sum {n: nat} (X: Vector.t R n) : R :=
+  match X with
+  | [] => 0%R
+  | hd:: tl => (hd + vector_sum tl)%R 
+end.
+
+
+Definition lin_ineq {n: nat} (i: Fin.t n) (X: Vector.t R n) (r2: Vector.t (Vector.t R n) n) (r1: Vector.t R n) : Prop :=
+     Rle (Vector.nth X i)  ((vector_sum (zip Rmult (Vector.nth r2 i) (X))) + (Vector.nth r1 i))%R. 
+
+
+(*
 Fixpoint inner_ineqs (m : nat) (G : Vector.t Assertion m) (P : Vector.t R m) : (Vector.t PAssertion m) :=
   match m with
   | O => (nil _)
@@ -564,7 +629,7 @@ Fixpoint inner_conj (m : nat) (gamma : Assertion) (P : Vector.t R m) : PAssertio
   | cons _ r m tl => (fun ps => (Rle (Pteval (Pint gamma) ps) r) /\ (inner_conj _ gamma tl) ps)
 end.
 Definition post_wh (m : nat) (beta gamma: Assertion) (P : Vector.t R m) (T : Vector.t R m) : PAssertion :=
-  fun ps => (inner_conj m gamma P) ps /\ (Rle (Pteval (Pint (~ beta /\ gamma))) )
+  fun ps => (inner_conj m gamma P) ps /\ (Rle (Pteval (Pint (~ beta /\ gamma))) ) *)
 
 (* Hoare triples
  *)
@@ -597,8 +662,14 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
   | HOr : forall (eta0 eta1 eta2 : PAssertion) (c : Cmd), hoare_triple eta0 c eta2 -> hoare_triple eta1 c eta2 -> hoare_triple {{eta0 \/ eta1}} c eta2
   
   | HWhile : forall (m : nat) (beta gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
-      (forall st, beta st -> (vector_to_disj m G) st) -> (forall (i : Fin.t m), hoare_triple (int_true_eq_one (Vector.nth G i)) s (fun ps => )) 
-      -> hoare_triple (fun ps => True) s (fun ps => True). 
+      (forall st, beta st -> (vector_to_disj m G) st) -> (forall (i : Fin.t m), hoare_triple (int_true_eq_one (Vector.nth G i)) s (antecedent_leq i G P beta gamma  T)) 
+      -> (forall (i: Fin.t m), lin_ineq i X P T)
+      -> (forall (i: Fin.t m) (y: string), 
+              hoare_triple (fun ps =>  (int_true_leq_R 
+                        (fun st => (beta st) /\ ((Vector.nth G i) st)) 
+                    ((snd ps) y)) ps) s (fun ps => ( gamma_leq gamma (Rmult (Vector.nth X i) ((snd ps) y))) ps)
+          )
+. 
   
 
 
