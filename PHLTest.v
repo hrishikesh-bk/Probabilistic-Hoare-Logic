@@ -576,12 +576,13 @@ Definition zip_gamma_compare {n: nat} (op: Assertion -> R -> PAssertion)(gammas:
   zip (fun (g: Assertion) (r: R) =>  op g r) 
     gammas rs .
 
-
-Definition gamma_leq := (fun (gamma: Assertion) (r: R) =>  (fun (st: Pstate) => ((( PTermexp_of_pterm (Pint gamma)) st) <= ((PTerm_of_R r) st))%R)).
-Definition gamma_geq := (fun (gamma: Assertion) (r: R) =>  (fun (st: Pstate) => ((( PTermexp_of_pterm (Pint gamma)) st) >= ((PTerm_of_R r) st))%R)).
-Definition gamma_eq := (fun (gamma: Assertion) (r: R) =>  (fun (st: Pstate) => ((( PTermexp_of_pterm (Pint gamma)) st) = ((PTerm_of_R r) st))%R)).
+Definition gamma_compare (op: R -> R -> Prop) (gamma: Assertion) (r: R) : PAssertion :=
+    (  fun (st: Pstate) => (op (( PTermexp_of_pterm (Pint gamma)) st) ((PTerm_of_R r) st))  ).
 
 
+Definition gamma_leq := gamma_compare Rle.
+Definition gamma_eq := gamma_compare (@eq R).
+Definition gamma_geq := gamma_compare Rge.
 Definition zip_gamma_leq {n: nat} (gammas: Vector.t Assertion n) (rs: Vector.t R n) : Vector.t PAssertion n :=
   zip_gamma_compare gamma_leq gammas rs.
 Definition zip_gamma_geq {n: nat} (gammas: Vector.t Assertion n) (rs: Vector.t R n) : Vector.t PAssertion n :=
@@ -1070,6 +1071,10 @@ Proof. intros. eapply HConseq.
 Qed.
 
 
+
+
+(*
+
 Theorem ifthenpretty: forall (b y1 y2 z : string), y1<>y2 -> {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5)}}
       <{
   if b then z := 1 else z := 2 end
@@ -1158,7 +1163,20 @@ Qed.
 
 
 
- 
+
+
+
+
+
+
+
+
+
+
+
+
+(* The rest is commented *)
+
 
 (* Defining syntax of Probabilistic state formula *)
 
@@ -1231,7 +1249,7 @@ Coercion Aexp_of_aexp : aexp >-> Aexp.
 
 
 
-Definition Aexp : Type := state -> nat.
+Definition Aexp : Type := state -> nat. *)
 
 
 End PHL.
