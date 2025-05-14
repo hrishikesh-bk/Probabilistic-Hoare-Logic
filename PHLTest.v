@@ -132,6 +132,8 @@ Want, to interpret t: Term as  (fun (st: state) => (Teval t st):nat )
 
 Definition Assertion := state -> Prop.
 
+Definition Assertion_equiv (A1 A2 : Assertion) : Prop :=
+  forall st: state, A1 st <-> A2 st.
 
 Definition CTermexp: Type :=  state -> nat. (* Classical nat exp.*)
 (*Definition CBoolexp: Type := state -> Prop.*) (* Classical  Boolean/Prop exp*)
@@ -230,6 +232,7 @@ Definition Measure : Type := Assertion -> R.
 (* Axioms for measures
  *)
 Axiom empty_set_measure : forall mu : Measure, mu (fun _ => False) = 0%R.
+Axiom equivalence: forall (mu : Measure) (P Q : Assertion), (Assertion_equiv P Q) -> (mu P = mu Q).
 
 (* Defining interpretation of rigid variables. *)
 
@@ -662,13 +665,18 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
   
   | HOr : forall (eta0 eta1 eta2 : PAssertion) (c : Cmd), hoare_triple eta0 c eta2 -> hoare_triple eta1 c eta2 -> hoare_triple {{eta0 \/ eta1}} c eta2
   
-  | HWhile : forall (m : nat) (beta gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
-      (forall st, beta st -> (vector_to_disj m G) st) -> (forall (i : Fin.t m), hoare_triple (int_true_eq_one (Vector.nth G i)) s (antecedent_leq i G P beta gamma  T)) 
+  | HWhile : forall (m : nat) (beta : bexp) (gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
+      (forall st, Beval beta st -> (vector_to_disj m G) st) -> (forall (i : Fin.t m), hoare_triple (int_true_eq_one (Vector.nth G i)) s (antecedent_leq i G P beta gamma  T)) 
       -> (forall (i: Fin.t m), lin_ineq i X P T)
-      -> (forall (i: Fin.t m) (y: string), 
-              hoare_triple (fun ps =>  (int_true_leq_R 
-                        (fun st => (beta st) /\ ((Vector.nth G i) st)) 
-                    ((snd ps) y)) ps) s (fun ps => ( gamma_leq gamma (Rmult (Vector.nth X i) ((snd ps) y))) ps)
+      -> (forall (i: Fin.t m) (y: string) (tempAssertion : Assertion) (tempR : R), 
+              (forall st, (Vector.nth G i) st <-> tempAssertion st) ->
+              ((Vector.nth X i) = tempR) ->
+              hoare_triple {{((prob (beta /\ tempAssertion)) <= y) /\ ((prob (beta /\ tempAssertion)) = (prob true)) }}
+                            <{ while beta do s end }>
+                            {{(prob gamma) <= (tempR*y) }}
+              (* hoare_triple (fun ps =>  (int_true_leq_R 
+                        (fun st => (Beval beta st) /\ (tempAssertion st)) 
+                    ((snd ps) y)) ps) <{ while beta do s end }> (fun ps => ( gamma_leq gamma (Rmult tempR ((snd ps) y))) ps) *)
           )
 . 
   
@@ -1070,6 +1078,132 @@ Proof. intros. eapply HConseq.
         + eapply eliminate_y. easy. easy. rewrite helper1. apply intermediary with (b := b) (y1 := "a"%string) (z := z).
 Qed.
 
+Definition test_prog :=
+  <{ 
+  while true do 
+    "x1" toss 0.5; 
+    "x2" toss 0.5 end
+}>.
+
+Definition one_third : R := 1/3.
+
+Definition array1 : (Vector.t (Vector.t R 1) 1) := [([0.25%R])].
+Definition array2 : (Vector.t R 1) := [0.25%R].
+
+Definition finite_set_nonzero {n : nat} (f : Fin.t n) :
+  match n return (Fin.t n -> Prop) with
+  | 0 => fun p => False
+  | _ => fun _ => True
+end f.
+Proof. destruct f. auto. auto. Qed.
+
+Definition finiteset_1 {n : nat} (f : Fin.t n) :
+  match n return (Fin.t n -> Prop) with
+  | 1 => fun p => p = Fin.F1
+  | _ => fun _ => True
+end f.
+Proof. destruct f. 
+    - destruct n. auto. auto.
+    - destruct n. exfalso. apply (finite_set_nonzero f). easy.
+Qed.
+
+Theorem Fin1_is_singleton : forall a : Fin.t 1, a = Fin.F1.
+Proof. intros. apply (finiteset_1 a0). Qed.
+
+Theorem whiletest1: forall (x1 x2 y: string), (x1 <> x2) -> (x1 <> y) -> {{ ((prob ((x1 /\ x2) /\ (x1 /\ x2))) <= y) /\ ((prob ((x1 /\ x2) /\ (x1 /\ x2))) = (prob true)) }}
+<{ 
+  while (x1 /\ x2) do 
+    x1 toss 0.5; 
+    x2 toss 0.5 end
+}> {{ (prob (x1 /\ ~ x2)) <=  (one_third*y) }}.
+Proof. intros x1 x2 y Z1 Z2.
+       assert (H: forall (b : bexp) (tempA : Assertion), ((b = (And (BVar x1) (BVar x2))) -> (Assertion_equiv tempA (CBoolexp_of_bexp (And (BVar x1) (BVar x2)))) -> 
+({{ ((prob (b /\ tempA)) <= y) /\ ((prob (b /\ tempA)) = (prob true)) }}
+<{ 
+  while (b) do 
+    x1 toss 0.5; 
+    x2 toss 0.5 end
+}> {{ (prob (x1 /\ ~ x2)) <=  (one_third*y) }}))).
+      + intros. eapply HWhile.
+        ++ assert (T: forall st : state, (Beval b st) -> (vector_to_disj 1 ((fun st1 => Beval b st1) :: []) st)).
+          * intros. simpl. auto. 
+          * exact T.
+        ++ assert (forall i : Fin.t 1,
+hoare_triple
+  (int_true_eq_one
+     (nth
+        (cons (forall _ : state, Prop) (fun st1 : state => Beval b st1) 0
+           (nil (forall _ : state, Prop))) i)) (CSeq (BToss x1 0.5) (BToss x2 0.5))
+  (antecedent_leq i
+     (cons (forall _ : state, Prop) (fun st1 : state => Beval b st1) 0
+        (nil (forall _ : state, Prop))) [([0.25%R])] (CBoolexp_of_bexp b)
+     (fun st : state => and (CBoolexp_of_bexp (BVar x1) st) (not (CBoolexp_of_bexp (BVar x2) st)))
+     [0.25%R])).
+          * intros. replace i with (Fin.F1 : Fin.t 1). simpl. unfold int_true_eq_one. unfold antecedent_leq. simpl.
+            unfold CBoolexp_of_bexp. rewrite H. simpl. unfold inner_conj_leq. unfold zip_gamma_leq.
+            unfold zip_gamma_compare. unfold gamma_leq. unfold gamma_compare. unfold zip. unfold PTermexp_of_pterm. unfold PTerm_of_R.
+            unfold Pteval. simpl.
+            ** eapply HConseq.
+              - assert (T: PAImplies
+  (fun st : Pstate =>
+   and (eq (fst st (fun st1 : state => and (snd st1 x1) (snd st1 x2))) 1%R)
+     (eq (fst st (fun st1 : state => and (snd st1 x1) (snd st1 x2)))
+        (fst st (fun _ : state => True)))) 
+  {{((prob (true)) = 1)}} ). unfold PAImplies. intros. simpl. simpl in H1. transitivity (fst ps (fun st1 : state => and (snd st1 x1) (snd st1 x2))).
+   symmetry. apply H1. apply H1. apply T.
+              - assert (T: PAImplies ({{ (((prob (x1 /\ x2)) <= 0.25) /\ ((prob (x1 /\ (~ (x2)))) <= 0.25))}})
+  (fun ps : Pstate =>
+   and (and (Rle (fst ps (fun st1 : state => and (snd st1 x1) (snd st1 x2))) 0.25) True)
+     (Rle
+        (fst ps
+           (fun st : state =>
+            and (not (and (snd st x1) (snd st x2))) (and (snd st x1) (not (snd st x2))))) 0.25))). 
+            unfold PAImplies. intros. split. split. apply H1. easy. unfold Pteval in H1. 
+            assert (T1: (fst ps
+          (fun st : state => (CBoolexp_of_bexp (BVar x1) st) /\ (~ (CBoolexp_of_bexp (BVar x2) st))))
+                        = (fst ps (fun st : state => (~ ((snd st x1) /\ (snd st x2))) /\ ((snd st x1) /\ (~ (snd st x2)))))).
+            apply equivalence. unfold Assertion_equiv. intros. simpl. split. easy. easy. rewrite <- T1. apply H1. apply T.
+              - eapply HSeq. assert (T: {{(prob true) = 1}} x1 toss 0.5 {{(prob x1) = 0.5}}). apply probtoss_short. apply T.
+                eapply HConseq. 
+                +++ assert (T: PAImplies (fun st : Pstate => (Pteval (Pint (CBoolexp_of_bexp (BVar x1))) st) = (PTerm_of_R 0.5 st)) (btoss_pt x2 0.5 (fun st : Pstate =>
+   (((Pteval
+        (Pint
+           (fun st0 : state => (CBoolexp_of_bexp (BVar x1) st0) /\ (CBoolexp_of_bexp (BVar x2) st0)))
+        st) <= (PTerm_of_R 0.25 st))%R) /\
+   (((Pteval
+        (Pint
+           (fun st0 : state =>
+            (CBoolexp_of_bexp (BVar x1) st0) /\ (~ (CBoolexp_of_bexp (BVar x2) st0)))) st) <=
+     (PTerm_of_R 0.25 st))%R))) ). unfold PAImplies. intros. simpl. unfold btoss_pt. unfold measure_sub_btoss. unfold PTerm_of_R. unfold measure_sub_bexp.
+      unfold assertion_sub_bexp. unfold Beval. simpl. 
+      replace ((fun st : state => ((x2 !-> True; (snd st)) x1) /\ ((x2 !-> True; (snd st)) x2))) with ((fun st : state => ((snd st) x1))).
+      replace ((fun st : state => ((x2 !-> False; (snd st)) x1) /\ ((x2 !-> False; (snd st)) x2))) with ((fun st : state => False)).
+      replace ((fun st : state => ((x2 !-> True; (snd st)) x1) /\ (~ ((x2 !-> True; (snd st)) x2)))) with (fun st : state => False).
+      replace ((fun st : state => ((x2 !-> False; (snd st)) x1) /\ (~ ((x2 !-> False; (snd st)) x2)))) with ((fun st : state => ((snd st) x1))).
+      simpl. rewrite empty_set_measure. unfold Pteval in H1. unfold CBoolexp_of_bexp in H1. unfold Beval in H1. unfold PTerm_of_R in H1. rewrite H1. lra.
+        try apply functional_extensionality. intros. rewrite t_update_neq. rewrite t_update_eq. apply propositional_extensionality. easy. symmetry. apply Z1.
+        apply functional_extensionality. intros. rewrite t_update_neq. rewrite t_update_eq. apply propositional_extensionality. easy. symmetry. apply Z1.
+        apply functional_extensionality. intros. rewrite t_update_neq. rewrite t_update_eq. apply propositional_extensionality; easy; symmetry; apply Z1. symmetry. apply Z1.
+        apply functional_extensionality. intros. rewrite t_update_neq. rewrite t_update_eq. apply propositional_extensionality; easy; symmetry; apply Z1. symmetry. apply Z1.
+        apply T. 
+            +++ apply PAImpliesItself.
+            +++ apply HBToss.
+
+            ** symmetry. apply Fin1_is_singleton.
+          * apply H1.
+        ++ assert (T2: forall i : Fin.t 1, lin_ineq i [one_third] [([0.25%R])] [0.25%R]).
+          * intros. replace i with (Fin.F1 : Fin.t 1). unfold lin_ineq. simpl. unfold one_third. lra. symmetry. apply Fin1_is_singleton.  
+          * apply T2.        
+        ++ assert (T3: forall st : state, ([fun st1 : state => Beval b st1][@Fin.F1] st) <-> (tempA st)).
+          * intros.  simpl. symmetry. rewrite H. apply H0.
+          * apply T3.
+        ++ simpl. reflexivity.
+      + assert (T4: ({{(y >= (prob ((<{ (x1 /\ x2) }>) /\ (<{ (x1 /\ x2) }>)))) /\ ((prob ((<{ (x1 /\ x2) }>) /\ (<{ (x1 /\ x2) }>))) = (prob (true)))}} 
+      while <{ (x1 /\ x2) }> do x1 toss 0.5; x2 toss 0.5 end {{(one_third * y) >= (prob (x1 /\ (~ x2)))}})). apply H. easy. easy.
+      apply T4.
+Qed.  
+
+
 
 
 
@@ -1253,3 +1387,4 @@ Definition Aexp : Type := state -> nat. *)
 
 
 End PHL.
+Qed.
