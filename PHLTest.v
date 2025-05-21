@@ -605,8 +605,12 @@ Definition inner_conj_leq {n: nat} (gammas: Vector.t Assertion n) (rs: Vector.t 
   PAssertion_conj (zip_gamma_leq gammas rs).
 
 
-Definition antecedent_leq {n: nat} (i: Fin.t n) (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n) : PAssertion :=
-    fun ps => ((inner_conj_leq gammas (Vector.nth r2 i)) ps) /\ ((gamma_leq (\{ (~beta) /\ gamma \}) (Vector.nth r1 i) ) ps) . 
+
+(*Definition antecedent_leq {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n) : Vector.t PAssertion n :=
+     fun (argVecR: Vector.t R n) (argR: R) => (fun ps => ((inner_conj_leq gammas (Vector.nth r2 i)) ps) /\ ((gamma_leq (\{ (~beta) /\ gamma \}) (Vector.nth r1 i) ) ps)). 
+*)
+
+Definition apply_func {A B: Type} (f: A->B) (x: A) := f x.
 
 
 Fixpoint vector_sum {n: nat} (X: Vector.t R n) : R :=
@@ -634,6 +638,81 @@ Fixpoint inner_conj (m : nat) (gamma : Assertion) (P : Vector.t R m) : PAssertio
 end.
 Definition post_wh (m : nat) (beta gamma: Assertion) (P : Vector.t R m) (T : Vector.t R m) : PAssertion :=
   fun ps => (inner_conj m gamma P) ps /\ (Rle (Pteval (Pint (~ beta /\ gamma))) ) *)
+
+
+Fixpoint rev_map {n: nat} {A B: Type} (f_vec: Vector.t (A->B) n) (a: A) :  Vector.t B n :=
+  match f_vec with
+    | [] => []
+    | hd :: tl => (hd a) :: (rev_map tl a)
+ end.
+
+
+(* Returns a vector of PAssertions V where V[i] = /\_{j} gamma_ij <=q r_ij /\ ~beta /\ gamma <= r_i *)
+Definition antecedent_leq {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n) : Vector.t PAssertion n :=
+     zip apply_func 
+        (Vector.map 
+            (fun (argR: R) => 
+                  fun (argVecR: Vector.t R n)  => 
+                      (fun ps => ((inner_conj_leq gammas argVecR) ps) /\ ((gamma_leq (\{ (~beta) /\ gamma \}) argR ) ps)))
+          r1)
+        r2. 
+
+(* Input - vector of preconditions P, a command c, vector of postconiditions Q, Returns - vector of hoare P c Q *)
+Definition hoare_list {n: nat} (hoare: PAssertion -> Cmd -> PAssertion -> Prop) 
+      (P: Vector.t PAssertion n) (c: Cmd) (Q: Vector.t PAssertion n) : Vector.t Prop n :=
+       zip apply_func (rev_map (Vector.map hoare P) c) Q. 
+
+Check Vector.fold_right.
+Check Vector.fold_left.
+
+Definition hoare_list_leq {hoare:  PAssertion -> Cmd -> PAssertion -> Prop} {s: Cmd}  
+ {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n): Prop  := 
+  Vector.fold_right and  (hoare_list hoare (Vector.map int_true_eq_one gammas) s (antecedent_leq gammas r2 beta gamma  r1)) True.  
+
+(*Fixpoint vec_to_func {n: nat} {A: Type} (def: Type)  (vec: Vector.t A n) : nary_type n A :=
+  match vec with
+  | [] => 
+  | hd:: tl => hd->(vec_to_func def tl)
+end.*)
+
+Check Vector.nth.
+
+(*
+
+m : nat
+
+f0->f1->f2->...->fm
+
+*)
+
+
+Fixpoint nary_type (n: nat) (A: Type) : Type :=
+match n with 
+| 0 => A
+| S n' => A -> nary_type n' A
+end.
+
+Theorem fdafd : nary_type 0 Prop = Prop.
+Proof.
+simpl. auto.
+Qed.
+
+
+
+Fixpoint vec_to_func {n: nat} (def: Prop) (vec: Vector.t Prop n) : Type :=
+  match vec with
+  | [] => def
+  | hd:: tl => hd->(vec_to_func def tl)
+end.
+
+(* 
+Definition arrow {hoare:  PAssertion -> Cmd -> PAssertion -> Prop} {s: Cmd}  
+ {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n): Prop  := 
+  vec_to_func True  (hoare_list hoare (Vector.map int_true_eq_one gammas) s (antecedent_leq gammas r2 beta gamma  r1)).  
+
+*)
+
+
 
 (* Hoare triples
  *)
@@ -666,7 +745,16 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
   | HOr : forall (eta0 eta1 eta2 : PAssertion) (c : Cmd), hoare_triple eta0 c eta2 -> hoare_triple eta1 c eta2 -> hoare_triple {{eta0 \/ eta1}} c eta2
   
   | HWhile : forall (m : nat) (beta : bexp) (gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
-      (forall st, Beval beta st -> (vector_to_disj m G) st) -> (forall (i : Fin.t m), hoare_triple (int_true_eq_one (Vector.nth G i)) s (antecedent_leq i G P beta gamma  T)) 
+      (forall st, Beval beta st -> (vector_to_disj m G) st) -> 
+
+             (forall (i: Fin.t m), 
+                    hoare_triple (Vector.nth (Vector.map int_true_eq_one G) i) s (Vector.nth (antecedent_leq G P beta gamma  T) i)
+              )
+
+          (* vec_to_func True  (hoare_list hoare_triple (Vector.map int_true_eq_one G) s (antecedent_leq G P beta gamma  T)) *)
+
+          (* @hoare_list_leq hoare_triple s m G P beta gamma T *)
+
       -> (forall (i: Fin.t m), lin_ineq i X P T)
       -> (forall (i: Fin.t m) (y: string) (tempAssertion : Assertion) (tempR : R), 
               (forall st, (Vector.nth G i) st <-> tempAssertion st) ->
@@ -679,8 +767,17 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
                     ((snd ps) y)) ps) <{ while beta do s end }> (fun ps => ( gamma_leq gamma (Rmult tempR ((snd ps) y))) ps) *)
           )
 . 
-  
 
+(* m = (S^m 0) *)
+
+ 
+
+
+(* fi => hoare_triple i
+While b do s od
+{P} s {Q}
+[hoare_triple 1, hoare_triple 2,... hoare_triple m] <= [ f1, f2, ...., fm] *)
+(* {0, 1,...m} *)
 
 Declare Scope hoare_spec_scope.
 Open Scope hoare_spec_scope.
@@ -1387,4 +1484,5 @@ Definition Aexp : Type := state -> nat. *)
 
 
 End PHL.
+Qed.
 Qed.
