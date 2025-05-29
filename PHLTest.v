@@ -604,6 +604,8 @@ end.
 Definition inner_conj_leq {n: nat} (gammas: Vector.t Assertion n) (rs: Vector.t R n) : PAssertion :=
   PAssertion_conj (zip_gamma_leq gammas rs).
 
+Definition inner_conj_geq {n: nat} (gammas: Vector.t Assertion n) (rs: Vector.t R n) : PAssertion :=
+  PAssertion_conj (zip_gamma_geq gammas rs).
 
 
 (*Definition antecedent_leq {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n) : Vector.t PAssertion n :=
@@ -620,9 +622,11 @@ Fixpoint vector_sum {n: nat} (X: Vector.t R n) : R :=
 end.
 
 
-Definition lin_ineq {n: nat} (i: Fin.t n) (X: Vector.t R n) (r2: Vector.t (Vector.t R n) n) (r1: Vector.t R n) : Prop :=
-     Rle (Vector.nth X i)  ((vector_sum (zip Rmult (Vector.nth r2 i) (X))) + (Vector.nth r1 i))%R. 
+Definition lin_ineq {n: nat} (i: nat) (X: Vector.t R n) (r2: Vector.t (Vector.t R n) n) (r1: Vector.t R n) : Prop :=
+     Rge (List.nth i (Vector.to_list X) 0%R)  ((vector_sum (zip Rmult (List.nth i (Vector.to_list r2) (const 0%R n)) (X))) + (List.nth i (Vector.to_list r1) (0%R)))%R. 
 
+Definition lin_ineq_lb {n: nat} (i: nat) (X: Vector.t R n) (r2: Vector.t (Vector.t R n) n) (r1: Vector.t R n) : Prop :=
+     Rle (List.nth i (Vector.to_list X) 0%R)  ((vector_sum (zip Rmult (List.nth i (Vector.to_list r2) (const 0%R n)) (X))) + (List.nth i (Vector.to_list r1) (0%R)))%R.
 
 (*
 Fixpoint inner_ineqs (m : nat) (G : Vector.t Assertion m) (P : Vector.t R m) : (Vector.t PAssertion m) :=
@@ -657,6 +661,15 @@ Definition antecedent_leq {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t 
           r1)
         r2. 
 
+Definition antecedent_geq {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n) : Vector.t PAssertion n :=
+     zip apply_func 
+        (Vector.map 
+            (fun (argR: R) => 
+                  fun (argVecR: Vector.t R n)  => 
+                      (fun ps => ((inner_conj_geq gammas argVecR) ps) /\ ((gamma_geq (\{ (~beta) /\ gamma \}) argR ) ps)))
+          r1)
+        r2. 
+
 (* Input - vector of preconditions P, a command c, vector of postconiditions Q, Returns - vector of hoare P c Q *)
 Definition hoare_list {n: nat} (hoare: PAssertion -> Cmd -> PAssertion -> Prop) 
       (P: Vector.t PAssertion n) (c: Cmd) (Q: Vector.t PAssertion n) : Vector.t Prop n :=
@@ -665,8 +678,8 @@ Definition hoare_list {n: nat} (hoare: PAssertion -> Cmd -> PAssertion -> Prop)
 Check Vector.fold_right.
 Check Vector.fold_left.
 
-Definition hoare_list_leq {hoare:  PAssertion -> Cmd -> PAssertion -> Prop} {s: Cmd}  
- {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n): Prop  := 
+Definition hoare_list_leq (hoare:  PAssertion -> Cmd -> PAssertion -> Prop) (s: Cmd)  
+ (n: nat) (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n): Prop  := 
   Vector.fold_right and  (hoare_list hoare (Vector.map int_true_eq_one gammas) s (antecedent_leq gammas r2 beta gamma  r1)) True.  
 
 (*Fixpoint vec_to_func {n: nat} {A: Type} (def: Type)  (vec: Vector.t A n) : nary_type n A :=
@@ -674,9 +687,12 @@ Definition hoare_list_leq {hoare:  PAssertion -> Cmd -> PAssertion -> Prop} {s: 
   | [] => 
   | hd:: tl => hd->(vec_to_func def tl)
 end.*)
-
+Check hoare_list_leq.
 Check Vector.nth.
+Inductive dummy : PAssertion -> Cmd -> PAssertion -> Prop :=
+  | all: forall P s Q, dummy P s Q. 
 
+Check hoare_list_leq (fun P s Q => dummy P s Q).
 (*
 
 m : nat
@@ -712,6 +728,7 @@ Definition arrow {hoare:  PAssertion -> Cmd -> PAssertion -> Prop} {s: Cmd}
 
 *)
 
+(* Helper functions for While lower bound rule *)
 
 
 (* Hoare triples
@@ -744,24 +761,46 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
   
   | HOr : forall (eta0 eta1 eta2 : PAssertion) (c : Cmd), hoare_triple eta0 c eta2 -> hoare_triple eta1 c eta2 -> hoare_triple {{eta0 \/ eta1}} c eta2
   
-  | HWhile : forall (m : nat) (beta : bexp) (gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
+  | HWhileUB : forall (m : nat) (beta : bexp) (gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
       (forall st, Beval beta st -> (vector_to_disj m G) st) -> 
 
-             (forall (i: Fin.t m), 
+             (* (forall (i: Fin.t m), 
                     hoare_triple (Vector.nth (Vector.map int_true_eq_one G) i) s (Vector.nth (antecedent_leq G P beta gamma  T) i)
+              ) *)
+              (forall i : nat, (i < m) -> 
+                    (hoare_triple (List.nth i (Vector.to_list (Vector.map int_true_eq_one G)) {{true}}) s (List.nth i (Vector.to_list (antecedent_leq G P beta gamma T)) {{true}}))
               )
-
-          (* vec_to_func True  (hoare_list hoare_triple (Vector.map int_true_eq_one G) s (antecedent_leq G P beta gamma  T)) *)
+            (* (hoare_list_leq (fun (P : PAssertion) (s : Cmd) (Q : PAssertion) => hoare_triple P s Q) s m G P (CBoolexp_of_bexp beta) gamma T)  
+      (list_of_triples -> Prop) *)
+           (* vec_to_func True  (hoare_list hoare_triple (Vector.map int_true_eq_one G) s (antecedent_leq G P beta gamma  T))  *)
 
           (* @hoare_list_leq hoare_triple s m G P beta gamma T *)
 
-      -> (forall (i: Fin.t m), lin_ineq i X P T)
-      -> (forall (i: Fin.t m) (y: string) (tempAssertion : Assertion) (tempR : R), 
-              (forall st, (Vector.nth G i) st <-> tempAssertion st) ->
-              ((Vector.nth X i) = tempR) ->
+      -> (forall (i:nat), (i < m) -> lin_ineq i X P T)
+      -> (forall (i: nat) (y: string) (tempAssertion : Assertion) (tempR : R), 
+              (i < m) -> (forall st, (List.nth i (Vector.to_list G) {{true}}) st <-> tempAssertion st) ->
+              ((List.nth i (Vector.to_list X) 0%R) = tempR) ->
               hoare_triple {{((prob (beta /\ tempAssertion)) <= y) /\ ((prob (beta /\ tempAssertion)) = (prob true)) }}
                             <{ while beta do s end }>
                             {{(prob gamma) <= (tempR*y) }}
+              (* hoare_triple (fun ps =>  (int_true_leq_R 
+                        (fun st => (Beval beta st) /\ (tempAssertion st)) 
+                    ((snd ps) y)) ps) <{ while beta do s end }> (fun ps => ( gamma_leq gamma (Rmult tempR ((snd ps) y))) ps) *)
+          )
+  | HWhileLB : forall (m : nat) (beta : bexp) (gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
+              (forall (i : nat), (i < m) -> (forall st, (List.nth i (Vector.to_list G) {{true}}) st -> Beval beta st))
+                -> (forall (i j : nat), (i < m) -> (j < i) -> (forall st, ~ (((List.nth i (Vector.to_list G) {{true}}) st) /\ ((List.nth j (Vector.to_list G) {{true}}) st))))
+                -> (forall (i : nat), (i < m) -> ((List.nth i (Vector.to_list T) 0%R) > 0)%R \/ exists (j : nat), (j < i) /\ ((List.nth j (Vector.to_list (List.nth i (Vector.to_list P) (const 0%R m))) 0%R) > 0)%R)
+                -> (forall i : nat, (i < m) -> 
+                    (hoare_triple (List.nth i (Vector.to_list (Vector.map int_true_eq_one G)) {{true}}) s (List.nth i (Vector.to_list (antecedent_geq G P beta gamma T)) {{true}}))
+              )
+                -> (forall (i:nat), (i < m) -> lin_ineq_lb i X P T)
+                -> (forall (i: nat) (y: string) (tempAssertion : Assertion) (tempR : R), 
+              (i < m) -> (forall st, (List.nth i (Vector.to_list G) {{true}}) st <-> tempAssertion st) ->
+              ((List.nth i (Vector.to_list X) 0%R) = tempR) ->
+              hoare_triple {{((prob (beta /\ tempAssertion)) >= y) /\ ((prob (beta /\ tempAssertion)) = (prob true)) }}
+                            <{ while beta do s end }>
+                            {{(prob gamma) >= (tempR*y) }}
               (* hoare_triple (fun ps =>  (int_true_leq_R 
                         (fun st => (Beval beta st) /\ (tempAssertion st)) 
                     ((snd ps) y)) ps) <{ while beta do s end }> (fun ps => ( gamma_leq gamma (Rmult tempR ((snd ps) y))) ps) *)
@@ -1221,45 +1260,52 @@ Proof. intros x1 x2 y Z1 Z2.
     x1 toss 0.5; 
     x2 toss 0.5 end
 }> {{ (prob (x1 /\ ~ x2)) <=  (one_third*y) }}))).
-      + intros. eapply HWhile.
+      + intros. eapply HWhileUB.
         ++ assert (T: forall st : state, (Beval b st) -> (vector_to_disj 1 ((fun st1 => Beval b st1) :: []) st)).
           * intros. simpl. auto. 
           * exact T.
-        ++ assert (forall i : Fin.t 1,
+        ++ assert (forall (i : nat) (_ : Peano.lt i 1),
 hoare_triple
-  (int_true_eq_one
-     (nth
-        (cons (forall _ : state, Prop) (fun st1 : state => Beval b st1) 0
-           (nil (forall _ : state, Prop))) i)) (CSeq (BToss x1 0.5) (BToss x2 0.5))
-  (antecedent_leq i
-     (cons (forall _ : state, Prop) (fun st1 : state => Beval b st1) 0
-        (nil (forall _ : state, Prop))) [([0.25%R])] (CBoolexp_of_bexp b)
-     (fun st : state => and (CBoolexp_of_bexp (BVar x1) st) (not (CBoolexp_of_bexp (BVar x2) st)))
-     [0.25%R])).
-          * intros. replace i with (Fin.F1 : Fin.t 1). simpl. unfold int_true_eq_one. unfold antecedent_leq. simpl.
+  (List.nth i
+     (to_list
+        (map int_true_eq_one
+           (cons (forall _ : state, Prop) (fun st1 : state => Beval b st1) 0
+              (nil (forall _ : state, Prop))))) (fun _ : Pstate => True))
+  (CSeq (BToss x1 0.5) (BToss x2 0.5))
+  (List.nth i
+     (to_list
+        (antecedent_leq
+           (cons (forall _ : state, Prop) (fun st1 : state => Beval b st1) 0
+              (nil (forall _ : state, Prop))) [([0.25%R])] (CBoolexp_of_bexp b)
+           (fun st : state =>
+            and (CBoolexp_of_bexp (BVar x1) st) (not (CBoolexp_of_bexp (BVar x2) st)))
+           [0.25%R])) (fun _ : Pstate => True))).
+          * intros. destruct i. simpl. unfold int_true_eq_one. unfold apply_func. unfold inner_conj_leq. unfold gamma_leq. simpl.
+            unfold gamma_leq. unfold gamma_compare. unfold PTermexp_of_pterm. unfold PTerm_of_R. unfold Pteval. unfold CBoolexp_of_bexp.
+            (* simpl. replace i with (Fin.F1 : Fin.t 1). simpl. unfold int_true_eq_one. unfold antecedent_leq. simpl.
             unfold CBoolexp_of_bexp. rewrite H. simpl. unfold inner_conj_leq. unfold zip_gamma_leq.
             unfold zip_gamma_compare. unfold gamma_leq. unfold gamma_compare. unfold zip. unfold PTermexp_of_pterm. unfold PTerm_of_R.
-            unfold Pteval. simpl.
-            ** eapply HConseq.
+            unfold Pteval. simpl. *)
+            ** eapply HConseq. rewrite H. unfold Beval.
               - assert (T: PAImplies
   (fun st : Pstate =>
    and (eq (fst st (fun st1 : state => and (snd st1 x1) (snd st1 x2))) 1%R)
      (eq (fst st (fun st1 : state => and (snd st1 x1) (snd st1 x2)))
         (fst st (fun _ : state => True)))) 
   {{((prob (true)) = 1)}} ). unfold PAImplies. intros. simpl. simpl in H1. transitivity (fst ps (fun st1 : state => and (snd st1 x1) (snd st1 x2))).
-   symmetry. apply H1. apply H1. apply T.
-              - assert (T: PAImplies ({{ (((prob (x1 /\ x2)) <= 0.25) /\ ((prob (x1 /\ (~ (x2)))) <= 0.25))}})
+   symmetry. apply H2. apply H2. apply T.
+              - rewrite H. unfold Beval. assert (T: PAImplies ({{ (((prob (x1 /\ x2)) <= 0.25) /\ ((prob (x1 /\ (~ (x2)))) <= 0.25))}})
   (fun ps : Pstate =>
    and (and (Rle (fst ps (fun st1 : state => and (snd st1 x1) (snd st1 x2))) 0.25) True)
      (Rle
         (fst ps
            (fun st : state =>
             and (not (and (snd st x1) (snd st x2))) (and (snd st x1) (not (snd st x2))))) 0.25))). 
-            unfold PAImplies. intros. split. split. apply H1. easy. unfold Pteval in H1. 
+            unfold PAImplies. intros. split. split. apply H2. easy. unfold Pteval in H1. 
             assert (T1: (fst ps
           (fun st : state => (CBoolexp_of_bexp (BVar x1) st) /\ (~ (CBoolexp_of_bexp (BVar x2) st))))
                         = (fst ps (fun st : state => (~ ((snd st x1) /\ (snd st x2))) /\ ((snd st x1) /\ (~ (snd st x2)))))).
-            apply equivalence. unfold Assertion_equiv. intros. simpl. split. easy. easy. rewrite <- T1. apply H1. apply T.
+            apply equivalence. unfold Assertion_equiv. intros. simpl. split. easy. easy. rewrite <- T1. apply H2. apply T.
               - eapply HSeq. assert (T: {{(prob true) = 1}} x1 toss 0.5 {{(prob x1) = 0.5}}). apply probtoss_short. apply T.
                 eapply HConseq. 
                 +++ assert (T: PAImplies (fun st : Pstate => (Pteval (Pint (CBoolexp_of_bexp (BVar x1))) st) = (PTerm_of_R 0.5 st)) (btoss_pt x2 0.5 (fun st : Pstate =>
@@ -1277,7 +1323,7 @@ hoare_triple
       replace ((fun st : state => ((x2 !-> False; (snd st)) x1) /\ ((x2 !-> False; (snd st)) x2))) with ((fun st : state => False)).
       replace ((fun st : state => ((x2 !-> True; (snd st)) x1) /\ (~ ((x2 !-> True; (snd st)) x2)))) with (fun st : state => False).
       replace ((fun st : state => ((x2 !-> False; (snd st)) x1) /\ (~ ((x2 !-> False; (snd st)) x2)))) with ((fun st : state => ((snd st) x1))).
-      simpl. rewrite empty_set_measure. unfold Pteval in H1. unfold CBoolexp_of_bexp in H1. unfold Beval in H1. unfold PTerm_of_R in H1. rewrite H1. lra.
+      simpl. rewrite empty_set_measure. unfold Pteval in H2. unfold CBoolexp_of_bexp in H2. unfold Beval in H2. unfold PTerm_of_R in H2. rewrite H2. lra.
         try apply functional_extensionality. intros. rewrite t_update_neq. rewrite t_update_eq. apply propositional_extensionality. easy. symmetry. apply Z1.
         apply functional_extensionality. intros. rewrite t_update_neq. rewrite t_update_eq. apply propositional_extensionality. easy. symmetry. apply Z1.
         apply functional_extensionality. intros. rewrite t_update_neq. rewrite t_update_eq. apply propositional_extensionality; easy; symmetry; apply Z1. symmetry. apply Z1.
@@ -1286,19 +1332,156 @@ hoare_triple
             +++ apply PAImpliesItself.
             +++ apply HBToss.
 
-            ** symmetry. apply Fin1_is_singleton.
+            ** exfalso. assert (T: ~ ((S i) < 1)). intros. lia. contradiction. 
+                (* auto. apply Nat.ltb_lt in H1. . order. apply H2 in H1. easy. assert (forall k : nat, ~ ((S k) < 1)).
+                intros K. induction K. apply (PeanoNat.Nat.ltb_lt 1 1).  easy. contradiction. symmetry. apply Fin1_is_singleton. *)
           * apply H1.
-        ++ assert (T2: forall i : Fin.t 1, lin_ineq i [one_third] [([0.25%R])] [0.25%R]).
-          * intros. replace i with (Fin.F1 : Fin.t 1). unfold lin_ineq. simpl. unfold one_third. lra. symmetry. apply Fin1_is_singleton.  
+        ++ assert (T2: forall i : nat, (i < 1) -> lin_ineq i [one_third] [([0.25%R])] [0.25%R]).
+          * intros. destruct i. unfold lin_ineq. simpl. unfold one_third. lra. assert (T: ~ ((S i) < 1)). lia. contradiction.
+(*            replace i with (Fin.F1 : Fin.t 1). unfold lin_ineq. simpl. unfold one_third. lra. symmetry. apply Fin1_is_singleton.   *)
           * apply T2.        
-        ++ assert (T3: forall st : state, ([fun st1 : state => Beval b st1][@Fin.F1] st) <-> (tempA st)).
-          * intros.  simpl. symmetry. rewrite H. apply H0.
+        ++ assert (0 < 1). lia. apply H1.
+        ++ intros. simpl. rewrite H. unfold Assertion_equiv in H0. symmetry. apply H0.
+        ++  simpl. reflexivity.
+(*           * intros.  simpl. symmetry. rewrite H. apply H0.
           * apply T3.
-        ++ simpl. reflexivity.
+        ++ simpl. reflexivity. *)
       + assert (T4: ({{(y >= (prob ((<{ (x1 /\ x2) }>) /\ (<{ (x1 /\ x2) }>)))) /\ ((prob ((<{ (x1 /\ x2) }>) /\ (<{ (x1 /\ x2) }>))) = (prob (true)))}} 
       while <{ (x1 /\ x2) }> do x1 toss 0.5; x2 toss 0.5 end {{(one_third * y) >= (prob (x1 /\ (~ x2)))}})). apply H. easy. easy.
       apply T4.
 Qed.  
+
+Theorem whiletest2: forall (x1 x2 y: string), (x1 <> x2) -> (x1 <> y) -> {{ ((prob ((x1) /\ (x1 /\ x2))) <= y) /\ ((prob ((x1) /\ (x1 /\ x2))) = (prob true)) }}
+<{ 
+  while (x1) do 
+    x1 toss 0.5; 
+    x2 toss 0.5 end
+}> {{ (prob (~ x1 /\ ~ x2)) <=  (0.5*y) }}.
+Proof. intros. eapply HWhileUB.
+      + assert (T: forall st : state, (Beval (BVar x1) st) -> ((vector_to_disj 2 [fun st1 => Beval (And (BVar x1) (BVar x2)) st1; fun st1 => Beval (And (BVar x1) (Not (BVar x2))) st1]) st)).
+        * intros. unfold vector_to_disj. simpl. simpl in H1. tauto.
+        * apply T.
+      + assert (T: forall (i : nat) (_ : Peano.lt i 2),
+hoare_triple
+  (List.nth i
+     (to_list
+        (map int_true_eq_one
+           (cons (forall _ : state, Prop)
+              (fun st1 : state => Beval (And (BVar x1) (BVar x2)) st1) 1
+              (cons (forall _ : state, Prop)
+                 (fun st1 : state =>
+                  Beval (And (BVar x1) (Not (BVar x2))) st1) 0
+                 (nil (forall _ : state, Prop))))))
+     (fun _ : Pstate => True)) (CSeq (BToss x1 0.5) (BToss x2 0.5))
+  (List.nth i
+     (to_list
+        (antecedent_leq
+           (cons (forall _ : state, Prop)
+              (fun st1 : state => Beval (And (BVar x1) (BVar x2)) st1) 1
+              (cons (forall _ : state, Prop)
+                 (fun st1 : state =>
+                  Beval (And (BVar x1) (Not (BVar x2))) st1) 0
+                 (nil (forall _ : state, Prop)))) 
+           [([0.25%R; 0.25%R]); ([0.25%R; 0.25%R])] (CBoolexp_of_bexp (BVar x1))
+           (fun st : state =>
+            and (not (CBoolexp_of_bexp (BVar x1) st))
+              (not (CBoolexp_of_bexp (BVar x2) st))) 
+           [0.25%R; 0.25%R])) (fun _ : Pstate => True))). 
+            * intros. destruct i.
+                -  simpl. unfold int_true_eq_one. unfold antecedent_leq. unfold apply_func. unfold inner_conj_leq. unfold gamma_leq. simpl.
+            unfold gamma_leq. unfold gamma_compare. unfold PTermexp_of_pterm. unfold PTerm_of_R. unfold Pteval. unfold CBoolexp_of_bexp. admit.
+                - destruct i. simpl. unfold int_true_eq_one. unfold antecedent_leq. unfold apply_func. unfold inner_conj_leq. unfold gamma_leq. simpl.
+            unfold gamma_leq. unfold gamma_compare. unfold PTermexp_of_pterm. unfold PTerm_of_R. unfold Pteval. unfold CBoolexp_of_bexp. admit.
+            assert (T: ~ (S (S i) < 2)). lia. contradiction.
+        * apply T.
+    + simpl. unfold int_true_eq_one. unfold antecedent_leq. unfold apply_func. unfold inner_conj_leq. unfold gamma_leq. simpl.
+            unfold gamma_leq. unfold gamma_compare. unfold PTermexp_of_pterm. unfold PTerm_of_R. unfold Pteval. unfold CBoolexp_of_bexp. 
+        * simpl. unfold int_true_eq_one. simpl. unfold antecedent_leq. unfold inner_conj_leq. unfold zip_gamma_leq. unfold gamma_leq. unfold gamma_compare. simpl.
+          unfold apply_func.
+          unfold zip. unfold map. simpl. unfold PAssertion_conj. simpl. unfold zip. unfold to_list. simpl. 
+          assert (forall i : nat,
+(i < 2) ->
+(lin_ineq i [0.5%R; 0.5%R] [([0.25%R; 0.25%R]); ([0.25%R; 0.25%R])] [0.25%R; 0.25%R])).
+          -- intros. destruct i. unfold lin_ineq. simpl. lra. destruct i. unfold lin_ineq. simpl. lra.
+              assert (T: ~ (S (S i) < 2)). lia. contradiction. 
+          -- apply H1.
+      + assert (0 < 2). lia. exact H1.
+      + intros. simpl. tauto.
+      + intros. simpl. reflexivity.
+Admitted.
+
+(* Herman Self Stabilising protocol *)
+Definition Herman_guard (x1 x2 x3 : string) : bexp := <{(x1 /\ x2 /\ x3) \/ (~x1 /\ ~x2 /\ ~x3)}>.
+Definition Herman (x1 x2 x3: string) : Cmd :=
+<{ 
+  while (x1 /\ x2 /\ x3) \/ (~x1 /\ ~x2 /\ ~x3) do 
+    x1 toss 0.5; 
+    x2 toss 0.5;
+    x3 toss 0.5 end
+}>.
+
+Theorem Herman_termination: forall (x1 x2 x3 y : string), (x1 <> x2) /\ (x2 <> x3) /\ (x1 <> y) -> {{((prob (((x1 /\ x2 /\ x3) \/ (~x1 /\ ~x2 /\ ~x3)) /\ (x1 /\ x2 /\ x3))) >= y) /\ ((prob (((x1 /\ x2 /\ x3) \/ (~x1 /\ ~x2 /\ ~x3)) /\ (x1 /\ x2 /\ x3))) = (prob true))}}
+  <{ 
+  while (x1 /\ (x2 /\ x3)) \/ (~x1 /\ (~x2 /\ ~x3)) do 
+    x1 toss 0.5; 
+    x2 toss 0.5;
+    x3 toss 0.5 end
+}> {{(prob (true)) >= (1*y)}}.
+Proof. intros x1 x2 x3 y H1.
+       assert (T: forall (b : bexp) (tempA : Assertion), (b = <{(x1 /\ (x2 /\ x3)) \/ (~x1 /\ (~x2 /\ ~x3))}>) -> Assertion_equiv tempA (CBoolexp_of_bexp <{(x1 /\ (x2 /\ x3)) }>) 
+          -> {{ ((prob (b /\ tempA)) >= y) /\ ((prob (b /\ tempA)) = (prob true)) }}
+<{ 
+  while (b) do 
+    x1 toss 0.5; 
+    x2 toss 0.5;
+    x3 toss 0.5 end
+}> {{ (prob (true)) >=  (1*y) }}).
+    * intros. eapply HWhileLB.
+      - assert (forall i : nat,
+(i < 2) ->
+(forall st : state, ((List.nth i (to_list [CBoolexp_of_bexp <{x1 /\ (x2 /\ x3) }>; CBoolexp_of_bexp <{~ x1 /\ (~x2 /\ ~x3) }>]) (fun _ : state => True)) st) -> (Beval b st))).
+        --  intros i T1 st. destruct i.
+            ** simpl. rewrite H. unfold Beval. tauto.
+            ** destruct i.
+              *** simpl. rewrite H. unfold Beval. tauto.
+              *** assert (C : ~ (S (S i)) < 2). lia. contradiction.
+        -- apply H2.
+      - intros i j T1 T2 st. destruct i.
+        -- assert (~ (j < 0)). lia. contradiction.
+        -- destruct i.
+           ** destruct j. simpl. tauto. assert (~ (S j) < 1). lia. contradiction.
+           ** assert (~ (S (S i) < 2)). lia. contradiction.
+      - assert (forall i : nat,
+(i < 2) ->
+((((List.nth i (to_list [0.75%R; 0.75%R]) 0) > 0)%R) \/
+ (exists j : nat,
+    ((j < i) /\
+     (((List.nth j (to_list (List.nth i (to_list [([(1/8)%R; (1/8)%R]); ([(1/8)%R; (1/8)%R])]) (const 0 2))) 0) > 0)%R))))).
+        -- intros i T1. left. destruct i. simpl. lra. destruct i. simpl. lra. assert (~ (S (S i)) < 2). lia. contradiction.
+        -- exact H2.
+      - intros i T1. destruct i.
+        -- simpl. unfold int_true_eq_one. unfold inner_conj_geq. unfold apply_func. unfold gamma_geq. unfold gamma_compare. simpl. unfold gamma_geq.
+            unfold gamma_compare. admit.
+        -- destruct i. 
+          ** simpl. unfold int_true_eq_one. unfold inner_conj_geq. unfold apply_func. unfold gamma_geq. unfold gamma_compare. simpl. unfold gamma_geq.
+            unfold gamma_compare. admit.
+          ** assert (~ (S (S i)) < 2). lia. contradiction.
+      - assert (T: forall i : nat,
+(i < 2) ->
+(lin_ineq_lb i ([1%R; 1%R]) ([([(1 / 8)%R; (1 / 8)%R]); ([(1 / 8)%R; (1 / 8)%R])])
+   [0.75%R; 0.75%R])).
+        -- intros i T1. destruct i. unfold lin_ineq_lb. simpl. lra. destruct i. unfold lin_ineq_lb. simpl. lra. assert (~ (S (S i)) < 2). lia. contradiction.
+        -- apply T.
+      - assert (0 < 2). lia. exact H2.
+      - intros. simpl. symmetry. apply H0.
+      - simpl. lra.
+    * assert (H: ({{((prob ((<{ ((x1 /\ (x2 /\ x3)) \/ ((~ x1) /\ ((~ x2) /\ (~ x3)))) }>)) /\ (<{ (x1 /\ (x2 /\ x3)) }>)) >= y) /\ ((prob ((<{ ((x1 /\ (x2 /\ x3)) \/ ((~ x1) /\ ((~ x2) /\ (~ x3)))) }>)) /\ (<{ (x1 /\ (x2 /\ x3)) }>)) = (prob (true)))}} 
+      while <{ ((x1 /\ (x2 /\ x3)) \/ ((~ x1) /\ ((~ x2) /\ (~ x3)))) }> do x1 toss 0.5; (x2 toss 0.5; x3 toss 0.5) end
+      {{(prob (true)) >= (1 * y)}})). apply T. easy. easy. apply H.
+Admitted.           
+
+
+  
 
 
 
@@ -1484,5 +1667,3 @@ Definition Aexp : Type := state -> nat. *)
 
 
 End PHL.
-Qed.
-Qed.
