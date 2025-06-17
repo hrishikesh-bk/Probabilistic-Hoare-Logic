@@ -1,6 +1,6 @@
 (*Testing out stuff for Probabilistic Hoare Logic project *)
 
-From PLF Require Import Maps.
+From PHL Require Import Maps.
 From Coq Require Import Bool.
 From Coq Require Import Arith.
 From Coq Require Import EqNat.
@@ -1478,7 +1478,17 @@ Proof. intros x1 x2 x3 y H1.
     * assert (H: ({{((prob ((<{ ((x1 /\ (x2 /\ x3)) \/ ((~ x1) /\ ((~ x2) /\ (~ x3)))) }>)) /\ (<{ (x1 /\ (x2 /\ x3)) }>)) >= y) /\ ((prob ((<{ ((x1 /\ (x2 /\ x3)) \/ ((~ x1) /\ ((~ x2) /\ (~ x3)))) }>)) /\ (<{ (x1 /\ (x2 /\ x3)) }>)) = (prob (true)))}} 
       while <{ ((x1 /\ (x2 /\ x3)) \/ ((~ x1) /\ ((~ x2) /\ (~ x3)))) }> do x1 toss 0.5; (x2 toss 0.5; x3 toss 0.5) end
       {{(prob (true)) >= (1 * y)}})). apply T. easy. easy. apply H.
-Admitted.           
+Admitted.        
+
+Definition b : string := "b".
+Definition val : string := "val".
+
+Definition body : Cmd :=
+  <{ 
+  b toss 0.5;
+  if b then val := 2 * val + 1 else val := 2 * val end
+}>.
+   
 
 
   
