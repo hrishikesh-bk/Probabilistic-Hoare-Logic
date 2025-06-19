@@ -233,6 +233,40 @@ Definition Measure : Type := Assertion -> R.
  *)
 Axiom empty_set_measure : forall mu : Measure, mu (fun _ => False) = 0%R.
 Axiom equivalence: forall (mu : Measure) (P Q : Assertion), (Assertion_equiv P Q) -> (mu P = mu Q).
+Axiom fin_additivity: forall (mu : Measure) (P Q : Assertion), 
+    (forall st : state, ~ (P st /\ Q st)) -> ((mu P) + (mu Q))%R = (mu (fun st : state => P st \/ Q st)).
+Axiom positive : forall (mu : Measure) (P : Assertion), (mu P >= 0)%R.
+
+Theorem measure_inclusion: forall (mu : Measure) (P Q :Assertion), (forall st : state, P st -> Q st) -> ((mu P) <= (mu Q))%R.
+Proof. intros.
+        assert (T: (mu Q) = mu (\{(Q /\ ~ P) \/ P\})).
+          + apply equivalence. unfold Assertion_equiv. intros. split.
+              - tauto.
+              - intros. destruct H0. apply H0. apply H. apply H0. 
+          + rewrite T.
+            assert (T1 : ((mu (\{Q /\ ~ P\})) + (mu (\{ P \})))%R = mu (fun st : state => ((Q st) /\ (~ (P st))) \/ (P st))).
+              - apply fin_additivity. intros. tauto.
+              - rewrite <- T1.
+                assert (T2 : forall (r1 r2 : R), (0 <= r2)%R -> (r1 <= r2 + r1)%R).
+                  * intros. lra.
+                  * apply T2. apply Rge_le. apply positive.
+Qed. 
+
+Theorem measure_true_dest: forall (mu : Measure) (Q : Assertion), (mu \{ true \}) = ((mu (\{Q\})) + (mu \{ ~ Q \}))%R.
+Proof.
+  intros. replace (mu \{true\}) with (mu (\{ Q \/ ~ Q\})). symmetry. apply fin_additivity. intros. tauto.
+  apply equivalence. unfold Assertion_equiv. intros. tauto. 
+Qed.
+
+Theorem measure_P_eq_true: forall (mu : Measure) (P : Assertion), ((mu P) = mu (\{ true \}))%R -> ((mu \{ ~ P \}) = 0)%R.
+Proof. intros. replace (mu \{true\}) with ((mu (\{P\})) + (mu \{ ~ P \}))%R in H.
+        assert (T: forall (r r1 : R), (r1 = r1 + r)%R -> (r = 0)%R). intros. lra. apply T in H. apply H. symmetry. apply measure_true_dest.
+Qed.
+
+Theorem measure_inclusion_0: forall (mu : Measure) (P Q: Assertion), (forall st : state, P st -> Q st) -> (mu Q = 0)%R -> (mu P = 0)%R.
+Proof. intros mu P Q H1 H2. apply Rle_antisym. assert ((mu P <= mu Q)%R).
+       apply measure_inclusion. apply H1. apply Rle_trans with (r2 := mu Q). apply H. right. apply H2. apply Rge_le. apply positive.
+Qed.
 
 (* Defining interpretation of rigid variables. *)
 
