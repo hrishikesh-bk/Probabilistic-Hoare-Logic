@@ -28,6 +28,7 @@ Inductive Term: Type :=
   | Const (c : nat)
   | Var (x : string)
   | sum (t1 : Term) (t2 : Term)
+  | sub (t1 : Term) (t2 : Term)
   | mult (t1 : Term) (t2 : Term).
 
 (* Defining boolean expressions
@@ -59,6 +60,7 @@ Fixpoint Teval (t : Term) (s : state) : nat :=
     | Const c => c
     | Var x => (fst s) x
     | sum t1 t2 => (Teval t1 s) + (Teval t2 s)
+    | sub t1 t2 => (Teval t1 s) - (Teval t2 s)
     | mult t1 t2 => (Teval t1 s) * (Teval t2 s)
 end.
 
@@ -94,6 +96,7 @@ Notation "x" := x (in custom com at level 0, x constr at level 0) : com_scope.
 
 (* Terms - built using consts, vars and +/* *)
 Notation "x + y"   := (sum x y) (in custom com at level 50, left associativity): com_scope.
+Notation "x - y"   := (sub x y) (in custom com at level 50, left associativity): com_scope.
 Notation "x * y"   := (mult x y) (in custom com at level 40, left associativity): com_scope.
 
 (* bexps - built using term comparisons and boolean operators *)
