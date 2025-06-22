@@ -1545,7 +1545,7 @@ Proof.
 intros. pose proof (positive mu P) as H1. apply Rle_antisym. easy. apply Rge_le in H1. exact H1.
 Qed.
 
-Theorem empty_measure_inclusion: forall (mu:Measure) (P: Assertion), ((mu True) = 0)%R -> ((mu P) = 0)%R.
+Theorem empty_measure_inclusion: forall (mu:Measure), ((mu True) = 0)%R -> (forall (P: Assertion), ((mu P) = 0)%R).
 Proof.
 intros. assert (forall st : state, (P st) -> (assert_of_Prop True st)). intros. easy. pose proof measure_inclusion mu P (\{True\}) as H1.
 pose proof H1 H0. rewrite -> H in H2. pose proof measure_leq0_implies_eq0 mu P. pose proof H3 H2. assumption.
