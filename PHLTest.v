@@ -1525,192 +1525,32 @@ Definition body : Cmd :=
   b toss 0.5;
   if b then val := 2 * val + 1 else val := 2 * val end
 }>.
-   
+
+(* ------------Helper Theorems------------- *)
 
 
-  
-
-
-
-
-
-(*
-
-Theorem ifthenpretty: forall (b y1 y2 z : string), y1<>y2 -> {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5)}}
-      <{
-  if b then z := 1 else z := 2 end
- }> {{ (prob (z = 1)) = 0.5 }}.
-Proof. intros b y1 y2 z. intros H20.
-        assert (H : {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) /\ (y1 = 0.5) /\ (y2 = 0) }}  
-                      <{
-  if b then z := 1 else z := 2 end
- }> {{ (y1 = 0.5) /\ (y2 = 0) }}).
-  - assert (H1 :{{ (y1 = 0.5) /\ (y2 = 0) }}  <{
-  if b then z := 1 else z := 2 end
- }> {{ (y1 = 0.5) /\ (y2 = 0) }}).
-    + eapply HFree. simpl. unfold is_analytical. intros. unfold PTerm_of_R. rewrite H. easy.
-    + eapply HConseq.
-      * assert (PAImplies {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) /\ (y1 = 0.5) /\ (y2 = 0) }} {{ (y1 = 0.5) /\ (y2 = 0) }}).
-        ** unfold PAImplies. intros. split. apply H. apply H.
-        ** apply H.
-      * apply PAImpliesItself.
-      * apply H1.
-  - assert (H1: {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) /\ (y1 = 0.5) /\ (y2 = 0) }}  
-                      <{
-  if b then z := 1 else z := 2 end
- }> {{ (y1 + y2 = (prob (z = 1))) /\ ((y1 = 0.5) /\ (y2 = 0))  }}).
-      + eapply HAnd. 
-        * apply ifthen.
-        *  apply H.
-      + assert (H2: {{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) /\ (y1 = 0.5) /\ (y2 = 0) }}  
-                      <{
-  if b then z := 1 else z := 2 end
- }> {{ 0.5 = (prob (z = 1))  }}).
-          * eapply HConseq.
-            ** apply PAImpliesItself.
-            ** assert (PAImplies {{(y1 + y2 = (prob (z = 1))) /\ ((y1 = 0.5) /\ (y2 = 0))}} {{0.5 = (prob (z = 1)) }}).
-              -- unfold PAImplies. intros st. simpl. unfold PTerm_of_R. unfold CTermexp_of_nat. intros. destruct H0.
-                 destruct H2. rewrite H2 in H0. rewrite H3 in H0. rewrite <- H0. lra.
-              -- apply H0.
-            **  apply H1.
-          * assert (H3 :{{((prob b) = 0.5) /\ (((prob (~ b)) = 0.5) /\ (y1 = 0.5))}} 
-     if b then z := 1 else z := 2 end {{0.5 = (prob (z = 1))}}).
-            ** eapply HConseq. 
-              assert (H4: PAImplies (fun st : Pstate =>
-   ((Pteval (Pint (CBoolexp_of_bexp (BVar b))) st) = (PTerm_of_R 0.5 st)) /\
-   (((Pteval (Pint (fun st0 : state => ~ (CBoolexp_of_bexp (BVar b) st0))) st) =
-     (PTerm_of_R 0.5 st)) /\ ((PTermexp_of_pterm (Pvar y1) st) = (PTerm_of_R 0.5 st)))) 
-  (eta_update_y_p ({{(((prob b) = 0.5) /\ (((prob (~ b)) = 0.5) /\ (y1 = 0.5)))}}) (y2) (Preal 0%R))).
-                *** simpl. unfold eta_update_y_p. unfold pstate_update. unfold Pteval. unfold CBoolexp_of_bexp. 
-                    unfold PTerm_of_R. simpl. unfold PAImplies. intros. simpl. split. apply H0. rewrite t_update_neq.
-                    apply H0. symmetry. apply H20.
-                *** apply H4.
-                *** apply PAImpliesItself.
-                *** eapply HElimv.
-                  ++ simpl. unfold PTerm_of_R. unfold CBoolexp_of_bexp. unfold CTermexp_of_nat. 
-                     unfold CBoolexp_of_bexp in H2. unfold CTermexp_of_nat in H2. unfold Pteval in H2. unfold Beval in H2.
-                     unfold PTerm_of_R in H2. unfold PTermexp_of_pterm in H2. unfold CTermexp_of_Texp in H2. unfold Teval in H2.
-                     unfold Pteval in H2. unfold Beval. replace  (fun ps : Pstate =>
-   and
-     (and (eq (fst ps (fun st : state => snd st b)) 0.5%R)
-        (and (eq (fst ps (fun st : state => not (snd st b))) 0.5%R) (eq (snd ps y1) 0.5%R)))
-     (eq (snd ps y2) 0%R)) with  (fun st : Pstate =>
-        and (eq (fst st (fun st0 : state => snd st0 b)) 0.5%R)
-          (and (eq (fst st (fun st0 : state => not (snd st0 b))) 0.5%R)
-             (and (eq (snd st y1) 0.5%R) (eq (snd st y2) 0%R)))).
-                      +++ apply H2.
-                      +++ apply functional_extensionality. intros. simpl. apply propositional_extensionality.
-                          split. easy. easy.
-                  ++ unfold p_inv_y. easy.
-                  ++ unfold eta_inv_y. easy.
-               ** eapply HConseq.
-                  *** assert (H4: PAImplies  (fun st : Pstate =>
-   ((Pteval (Pint (CBoolexp_of_bexp (BVar b))) st) = (PTerm_of_R 0.5 st)) /\
-   ((Pteval (Pint (fun st0 : state => ~ (CBoolexp_of_bexp (BVar b) st0))) st) = (PTerm_of_R 0.5 st))) (eta_update_y_p ({{ ((prob b) = 0.5) /\ ((prob (~ b)) = 0.5) }}) (y1) (Preal 0.5%R))).
--- simpl. unfold eta_update_y_p. unfold pstate_update. unfold Pteval. unfold CBoolexp_of_bexp. 
-                    unfold PTerm_of_R. simpl. unfold PAImplies. intros. simpl. split. apply H0. apply H0.
-                -- apply H4.
-                *** apply PAImpliesItself.
-                *** eapply HElimv.
-                  ++ simpl. unfold PTerm_of_R. unfold CBoolexp_of_bexp. unfold CTermexp_of_nat. 
-                     unfold CBoolexp_of_bexp in H3. unfold CTermexp_of_nat in H3. unfold Pteval in H3. unfold Beval in H3.
-                     unfold PTerm_of_R in H3. unfold PTermexp_of_pterm in H3. unfold CTermexp_of_Texp in H3. unfold Teval in H3.
-                     unfold Pteval in H3. unfold Beval. replace (fun st : Pstate => (fst st (fun st0 : state => 1 = (fst st0 z))) = (0.5%R)) with (fun st : Pstate => (0.5%R) = (fst st (fun st0 : state => 1 = (fst st0 z)))).
-                        +++ rewrite helper1. apply H3.
-                        +++ apply functional_extensionality. intros. apply propositional_extensionality. easy.
-                  ++ easy. 
-                  ++ easy.
+Theorem RigidUnchanged: forall (y: string) (c: Cmd) (r: R), {{ y = r }} c {{ y = r}}.
+Proof.
+intros. apply HFree.
+unfold is_analytical. intros. split. simpl. rewrite -> H. easy. simpl. rewrite -> H. easy.
 Qed.
 
+Theorem measure_inclusion_true: forall (mu: Measure) (P: Assertion), ((mu P) <= (mu True))%R.
+Proof.
+intros. apply measure_inclusion. intros. easy.
+Qed.
 
+Theorem measure_leq0_implies_eq0: forall (mu: Measure) (P:Assertion), ((mu P) <= 0)%R -> ((mu P) = 0)%R.
+Proof.
+intros. pose proof (positive mu P) as H1. apply Rle_antisym. easy. apply Rge_le in H1. exact H1.
+Qed.
 
+Theorem empty_measure_inclusion: forall (mu:Measure) (P: Assertion), ((mu True) = 0)%R -> ((mu P) = 0)%R.
+Proof.
+intros. assert (forall st : state, (P st) -> (assert_of_Prop True st)). intros. easy. pose proof measure_inclusion mu P (\{True\}) as H1.
+pose proof H1 H0. rewrite -> H in H2. pose proof measure_leq0_implies_eq0 mu P. pose proof H3 H2. assumption.
+Qed.
 
-
-
-
-
-
-
-
-
-
-
-
-(* The rest is commented *)
-
-
-(* Defining syntax of Probabilistic state formula *)
-
-Inductive Psf : Type :=
-  | PsfT 
-  | PsfF
-  | Psfleq (t1 : Pterm) (t2 : Pterm)
-  | Psfnot (f1 : Psf)
-  | Psfor (f1 : Psf) (f2 : Psf)
-
-
-
-
-
-(* Function to evaluate psf *)
-
-(* Fixpoint Psfeval (f : Psf) (mu : Measure) (rho : Intp) : Prop :=
-  match f with
-    | PsfT => True
-    | PsfF => False
-    | Psfleq t1 t2 => Rle (Pteval t1 mu rho) (Pteval t2 mu rho)
-    | Psfnot f => ~ (Psfeval f mu rho)
-    | Psfor f1 f2 => (Psfeval f1 mu rho) \/ (Psfeval f2 mu rho)
-end. *)
-
-
-
-(* Coercions *)
-(* Recall - a classical state state:string -> nats*bool*)
-Definition CNatexp: Type :=  state -> nat. (* Classical nat exp.*)
-Definition CPropexp: Type := state -> Prop. (* Classical  Boolean/Prop exp*)
-(* Recall - Assertion := state -> Prop*)
-Definition assert_of_Prop (P : Prop) : Assertion := fun _ => P. (* P to 'if state satisfies P'*)
-Definition CNatexp_of_nat (n: nat) : CNatexp := fun _=> n. (*  n to 'given state st return n'*)
-Definition CNatexp_of_Texp (a: Term): CNatexp := fun st => Teval a st. (* evaluate the term on the state *) 
-
-Definition CPropexp_of_Prop (P: Prop): Assertion := fun _ => P.
-Definition  CPropexp_of_bexp (b: bexp): CPropexp := fun st => Beval b st. (* evaluate the _boolean_ term on the state *)
-
-Coercion assert_of_Prop : Sortclass >-> Assertion.
-Coercion CNatexp_of_nat : nat >->CNatexp.
-Coercion CNatexp_of_Texp : Term >-> CNatexp.
-
-(*Inductive Term: Type :=
-  | Const (c : nat)
-  | Var (x : string)
-  | sum (t1 : Term) (t2 : Term)
-  | mult (t1 : Term) (t2 : Term). *)
-
-Declare Custom Entry assn. (* The grammar for Hoare logic Assertions *)
-Declare Scope assertion_scope.
-
-Notation "a + b" := (fun st => (a:CNatexp) st + (b:CNatexp) st) (in custom assn at level 50, left associativity) : assertion_scope.
-Notation "a - b" := (fun st => (a:CNatexp) st - (b:CNatexp) st) (in custom assn at level 50, left associativity) : assertion_scope.
-Notation "a * b" := (fun st => (a:CNatexp) st * (b:CNatexp) st) (in custom assn at level 40, left associativity) : assertion_scope.
-Notation "( x )" := x (in custom assn at level 0, x at level 99) : assertion_scope.
-
-Definition assertion1: CNatexp := (12).
-Definition assertion2: CNatexp := 12 + 12.
-\u00b8
-Definition assert_of_Prop (P : Prop) : Assertion := fun _ => P.
-Definition Aexp_of_nat (n : nat) : Aexp := fun _ => n.
-
-Definition Aexp_of_aexp (a : aexp) : Aexp := fun st => aeval st a.
-
-Coercion assert_of_Prop : Sortclass >-> Assertion.
-Coercion Aexp_of_nat : nat >-> Aexp.
-Coercion Aexp_of_aexp : aexp >-> Aexp.
-
-
-
-
-Definition Aexp : Type := state -> nat. *)
-
+  
 
 End PHL.
