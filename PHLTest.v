@@ -1563,7 +1563,7 @@ intros. apply HConseq with (eta2 := eta1) (eta3 := eta2). easy. easy. easy. Qed.
 
 (* Tacticals *)
 
-Ltac uncoerce_basic H :=
+Ltac uncoerce_basic_H H :=
   repeat (
     simpl in H;
     unfold CTermexp_of_nat in H;
@@ -1571,6 +1571,19 @@ Ltac uncoerce_basic H :=
     unfold PTerm_of_R  in H
     ).
 
+Ltac uncoerce_basic_goal :=
+  repeat (
+    simpl;
+    unfold CTermexp_of_nat;
+    unfold CTermexp_of_Texp;
+    unfold PTerm_of_R
+    ).
+
+Tactic Notation "uncoerce_basic" :=
+  uncoerce_basic_goal.
+
+Tactic Notation "uncoerce_basic" ident(H) :=
+  uncoerce_basic_H H.
 
   
 
