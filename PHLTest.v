@@ -1526,7 +1526,8 @@ Definition body : Cmd :=
   if b then val := 2 * val + 1 else val := 2 * val end
 }>.
 
-(* ------------Helper Theorems------------- *)
+
+(* Helper Theorems *)
 
 
 Theorem RigidUnchanged: forall (y: string) (c: Cmd) (r: R), {{ y = r }} c {{ y = r}}.
@@ -1550,6 +1551,26 @@ Proof.
 intros. assert (forall st : state, (P st) -> (assert_of_Prop True st)). intros. easy. pose proof measure_inclusion mu P (\{True\}) as H1.
 pose proof H1 H0. rewrite -> H in H2. pose proof measure_leq0_implies_eq0 mu P. pose proof H3 H2. assumption.
 Qed.
+
+Theorem HConseqLeft: forall (eta1 eta2 eta3: PAssertion) (c: Cmd), PAImplies eta1 eta2 ->  hoare_triple eta2 c eta3 -> hoare_triple eta1 c eta3.
+Proof.
+intros. apply HConseq with (eta2 := eta2) (eta3 := eta3). easy. easy. easy. Qed.
+
+Theorem HConseqRight: forall (eta1 eta2 eta3: PAssertion) (c: Cmd), PAImplies eta2 eta3 ->  hoare_triple eta1 c eta2 -> hoare_triple eta1 c eta3.
+Proof.
+intros. apply HConseq with (eta2 := eta1) (eta3 := eta2). easy. easy. easy. Qed.
+ 
+
+(* Tacticals *)
+
+Ltac uncoerce_basic H :=
+  repeat (
+    simpl in H;
+    unfold CTermexp_of_nat in H;
+    unfold CTermexp_of_Texp in H;
+    unfold PTerm_of_R  in H
+    ).
+
 
   
 
