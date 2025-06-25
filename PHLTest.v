@@ -271,6 +271,11 @@ Proof. intros mu P Q H1 H2. apply Rle_antisym. assert ((mu P <= mu Q)%R).
        apply measure_inclusion. apply H1. apply Rle_trans with (r2 := mu Q). apply H. right. apply H2. apply Rge_le. apply positive.
 Qed.
 
+Theorem measure_AnotB : forall (mu : Measure) (P Q : Assertion), (mu (\{P /\ ~ Q \}) = mu (\{ P \}) - mu (\{ P /\ Q\}))%R.
+Proof. intros. replace (mu P) with (mu \{ (P /\ Q) \/ (P /\ ~Q)\}). rewrite <- fin_additivity. lra.
+       intros. tauto. apply equivalence. intro. tauto.
+Qed.
+
 (* Defining interpretation of rigid variables. *)
 
 Definition Intp := total_map R.
