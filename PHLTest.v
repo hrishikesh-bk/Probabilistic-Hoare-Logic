@@ -17,6 +17,7 @@ From Coq Require Import String.
 (* From Coq Require Import List. *)
 Import Vector.VectorNotations.
 From Coq Require Import Vector.
+Require Import Classical.
 
 (* Import ListNotations. *)
 
@@ -1546,12 +1547,28 @@ Proof.
 intros. apply measure_inclusion. intros. easy.
 Qed.
 
+
+Theorem measure_false_is_zero: forall (mu: Measure), ((mu ({{false}})) = 0)%R.
+Proof.
+intros. pose proof measure_true_dest mu (\{ true \}).
+        assert (((mu \{ ~ true \}) = 0)%R). lra.
+        assert  (mu \{ ~ true \} = mu ({{ false }})). apply equivalence. easy.
+        rewrite <- H1. easy.
+Qed.
+
 Theorem measure_leq0_implies_eq0: forall (mu: Measure) (P:Assertion), ((mu P) <= 0)%R -> ((mu P) = 0)%R.
 Proof.
 intros. pose proof (positive mu P) as H1. apply Rle_antisym. easy. apply Rge_le in H1. exact H1.
 Qed.
 
 Theorem empty_measure_inclusion: forall (mu:Measure), ((mu True) = 0)%R -> (forall (P: Assertion), ((mu P) = 0)%R).
+Proof.
+intros. assert (forall st : state, (P st) -> (assert_of_Prop True st)). intros. easy. pose proof measure_inclusion mu P (\{True\}) as H1.
+pose proof H1 H0. rewrite -> H in H2. pose proof measure_leq0_implies_eq0 mu P. pose proof H3 H2. assumption.
+Qed.
+
+(* Idk if I used the other version *)
+Theorem empty_measure_inclusion2: forall (mu:Measure) (P: Assertion), ((mu True) = 0)%R ->  ((mu P) = 0)%R.
 Proof.
 intros. assert (forall st : state, (P st) -> (assert_of_Prop True st)). intros. easy. pose proof measure_inclusion mu P (\{True\}) as H1.
 pose proof H1 H0. rewrite -> H in H2. pose proof measure_leq0_implies_eq0 mu P. pose proof H3 H2. assumption.
@@ -1564,6 +1581,55 @@ intros. apply HConseq with (eta2 := eta2) (eta3 := eta3). easy. easy. easy. Qed.
 Theorem HConseqRight: forall (eta1 eta2 eta3: PAssertion) (c: Cmd), PAImplies eta2 eta3 ->  hoare_triple eta1 c eta2 -> hoare_triple eta1 c eta3.
 Proof.
 intros. apply HConseq with (eta2 := eta1) (eta3 := eta2). easy. easy. easy. Qed.
+
+Theorem AddRigidLeft: forall (y: string) (r: R) (eta1 eta2: PAssertion) (c: Cmd), hoare_triple eta1 c eta2 -> 
+            hoare_triple (fun ps => eta1 ps /\ ((snd ps) y) = r) c eta2.
+Proof.
+intros. apply HConseqLeft with (eta2 := eta1). 2: easy. unfold PAImplies. intros. easy. Qed.
+
+Theorem AddAndLeft: forall (eta1 eta2 eta3: PAssertion) (c: Cmd), hoare_triple eta2 c eta3 -> ({{ eta1 /\ eta2 }} c {{ eta3}}).
+Proof.
+intros. apply HConseqLeft with (eta2:= ({{eta2}})). easy. easy. Qed.
+
+Theorem FlipAndLeft: forall (eta1 eta2 eta3: PAssertion) (c: Cmd), ({{ eta1 /\ eta2 }} c {{ eta3}}) -> ({{ eta1 /\ eta2 }} c {{ eta3}}).
+Proof.
+intros. apply HConseqLeft with (eta2:= ({{eta1 /\ eta2}})). easy. easy. Qed.
+
+Theorem FlipAndRight: forall (eta1 eta2 eta3: PAssertion) (c: Cmd), ({{ eta1 }} c {{ eta2 /\ eta3 }}) -> ({{ eta1 }} c {{ eta3 /\ eta2}}).
+Proof.
+intros. apply HConseqRight with (eta2:= ({{eta2 /\ eta3}})). easy. easy. Qed.
+
+Theorem AddRigidBoth: forall (y: string) (r: R) (eta1 eta2: PAssertion) (c: Cmd), hoare_triple eta1 c eta2 -> 
+            hoare_triple   (fun ps => eta1 ps /\ ((snd ps) y) = r) c (fun ps => eta2 ps /\ ((snd ps) y) = r).
+Proof.
+intros. pose proof AddRigidLeft y r eta1 eta2 c. pose proof RigidUnchanged y c r. uncoerce_basic H1. pose proof H0 H. apply HAnd. easy.
+apply HConseqLeft with (eta2 := (fun st : Pstate => snd st y = r)). easy. easy. Qed.
+
+
+Theorem AddRigidRight: forall (y: string) (r: R) (eta1 eta2: PAssertion) (c: Cmd), hoare_triple ({{eta1 /\ (y = r)}}) c eta2 -> 
+            hoare_triple   ({{eta1 /\ (y = r)}}) c ({{eta2 /\ (y = r)}}).
+Proof.
+intros. apply HAnd. easy. apply HConseqLeft with (eta2 := {{(y = r)}}). easy. apply RigidUnchanged. Qed.
+
+Theorem AddTrue: forall (mu: Measure) (P Q: Assertion), ((mu P) = (mu \{ true \}))%R -> ((mu Q) = (mu \{ P /\ Q \}))%R.
+Proof.
+intros. apply Rle_antisym. 
+- replace (mu Q) with (mu (\{(P /\ Q) \/ ( (~P) /\ Q) \})).
+  replace (mu (\{(P /\ Q) \/ ( (~P) /\ Q) \})) with ((mu (\{ P /\ Q \})) + (mu (\{ (~P) /\ Q \})))%R.
+  replace (((mu (fun st : state => (P st) /\ (Q st))) +
+  (mu (fun st : state => (~ (P st)) /\ (Q st)))) <=
+ (mu (fun st : state => (P st) /\ (Q st))))%R with (((mu (fun st : state => (~ (P st)) /\ (Q st)))) <=
+ 0)%R. 
+ -- assert (((mu \{~P\}) = 0)%R). apply measure_P_eq_true. easy. rewrite <- H0. apply measure_inclusion. easy. 
+ -- apply propositional_extensionality. split. lra. lra.
+ -- apply fin_additivity. easy.
+ -- apply equivalence. unfold Assertion_equiv. intros. split. intros. destruct H0. easy. easy. intros. destruct (classic (P st)); tauto.
+    
+  
+- apply measure_inclusion. easy.
+Qed. 
+
+
  
 
 (* Tacticals *)
