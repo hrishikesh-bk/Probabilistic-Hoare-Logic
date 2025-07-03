@@ -693,7 +693,6 @@ Fixpoint rev_map {n: nat} {A B: Type} (f_vec: Vector.t (A->B) n) (a: A) :  Vecto
     | hd :: tl => (hd a) :: (rev_map tl a)
  end.
 
-
 (* Returns a vector of PAssertions V where V[i] = /\_{j} gamma_ij <=q r_ij /\ ~beta /\ gamma <= r_i *)
 Definition antecedent_leq {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n) : Vector.t PAssertion n :=
      zip apply_func 
@@ -703,6 +702,14 @@ Definition antecedent_leq {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t 
                       (fun ps => ((inner_conj_leq gammas argVecR) ps) /\ ((gamma_leq (\{ (~beta) /\ gamma \}) argR ) ps)))
           r1)
         r2. 
+
+Definition antleq2 {n: nat} (i: nat) (gammas: Vector.t Assertion n) (r2: Vector.t R n) (beta gamma: Assertion) (r1: R) : PAssertion :=
+           fun ps =>( ((inner_conj_leq gammas r2) ps)  /\    ((gamma_leq (\{ (~beta) /\ gamma \}) r1) ps) ).
+
+
+
+
+
 
 Definition antecedent_geq {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t (Vector.t R n) n) (beta gamma: Assertion) (r1: Vector.t R n) : Vector.t PAssertion n :=
      zip apply_func 
@@ -848,8 +855,29 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
                         (fun st => (Beval beta st) /\ (tempAssertion st)) 
                     ((snd ps) y)) ps) <{ while beta do s end }> (fun ps => ( gamma_leq gamma (Rmult tempR ((snd ps) y))) ps) *)
           )
-. 
 
+   | HWhileLB2 : forall (m : nat) (beta : bexp) (gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
+              (forall (i : nat), (i < m) -> (forall st, (List.nth i (Vector.to_list G) {{true}}) st -> Beval beta st))
+                -> (forall (i j : nat), (i < m) -> (j < i) -> (forall st, ~ (((List.nth i (Vector.to_list G) {{true}}) st) /\ ((List.nth j (Vector.to_list G) {{true}}) st))))
+                -> (forall (i : nat), (i < m) -> ((List.nth i (Vector.to_list T) 0%R) > 0)%R \/ exists (j : nat), (j < i) /\ ((List.nth j (Vector.to_list (List.nth i (Vector.to_list P) (const 0%R m))) 0%R) > 0)%R)
+                -> (forall i : nat, (i < m) -> 
+                      (hoare_triple (List.nth i (Vector.to_list (Vector.map int_true_eq_one G)) {{true}}) 
+                                          s 
+                       (antleq2 i G (List.nth i (Vector.to_list P) (const 1%R m)) beta gamma (List.nth i (Vector.to_list T) (1%R)) ))
+              )
+                -> (forall (i:nat), (i < m) -> lin_ineq_lb i X P T)
+                -> (forall (i: nat) (y: string) (tempAssertion : Assertion) (tempR : R), 
+              (i < m) -> (forall st, (List.nth i (Vector.to_list G) {{true}}) st <-> tempAssertion st) ->
+              ((List.nth i (Vector.to_list X) 0%R) = tempR) ->
+              hoare_triple {{((prob (beta /\ tempAssertion)) >= y) /\ ((prob (beta /\ tempAssertion)) = (prob true)) }}
+                            <{ while beta do s end }>
+                            {{(prob gamma) >= (tempR*y) }}
+              (* hoare_triple (fun ps =>  (int_true_leq_R 
+                        (fun st => (Beval beta st) /\ (tempAssertion st)) 
+                    ((snd ps) y)) ps) <{ while beta do s end }> (fun ps => ( gamma_leq gamma (Rmult tempR ((snd ps) y))) ps) *)
+          )
+
+. 
 (* m = (S^m 0) *)
 
  
