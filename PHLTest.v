@@ -706,7 +706,8 @@ Definition antecedent_leq {n: nat} (gammas: Vector.t Assertion n) (r2: Vector.t 
 Definition antleq2 {n: nat} (i: nat) (gammas: Vector.t Assertion n) (r2: Vector.t R n) (beta gamma: Assertion) (r1: R) : PAssertion :=
            fun ps =>( ((inner_conj_leq gammas r2) ps)  /\    ((gamma_leq (\{ (~beta) /\ gamma \}) r1) ps) ).
 
-
+Definition antgeq2 {n: nat} (i: nat) (gammas: Vector.t Assertion n) (r2: Vector.t R n) (beta gamma: Assertion) (r1: R) : PAssertion :=
+           fun ps =>( ((inner_conj_geq gammas r2) ps)  /\    ((gamma_geq (\{ (~beta) /\ gamma \}) r1) ps) ).
 
 
 
@@ -863,7 +864,7 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
                 -> (forall i : nat, (i < m) -> 
                       (hoare_triple (List.nth i (Vector.to_list (Vector.map int_true_eq_one G)) {{true}}) 
                                           s 
-                       (antleq2 i G (List.nth i (Vector.to_list P) (const 1%R m)) beta gamma (List.nth i (Vector.to_list T) (1%R)) ))
+                       (antgeq2 i G (List.nth i (Vector.to_list P) (const 0%R m)) beta gamma (List.nth i (Vector.to_list T) (0%R)) ))
               )
                 -> (forall (i:nat), (i < m) -> lin_ineq_lb i X P T)
                 -> (forall (i: nat) (y: string) (tempAssertion : Assertion) (tempR : R), 
@@ -927,6 +928,31 @@ Definition assertion_sub_bexp (x : string) (b : bexp) (P : Assertion) : Assertio
   fun st => (P ( (fst st), (x !-> (Beval b st); (snd st))    )).
 
 *)
+
+(* Tacticals *)
+
+Ltac uncoerce_basic_H H :=
+  repeat (
+    simpl in H;
+    unfold CTermexp_of_nat in H;
+    unfold CTermexp_of_Texp in H;
+    unfold PTerm_of_R  in H
+    ).
+
+Ltac uncoerce_basic_goal :=
+  repeat (
+    simpl;
+    unfold CTermexp_of_nat;
+    unfold CTermexp_of_Texp;
+    unfold PTerm_of_R
+    ).
+
+Tactic Notation "uncoerce_basic" :=
+  uncoerce_basic_goal.
+
+Tactic Notation "uncoerce_basic" ident(H) :=
+  uncoerce_basic_H H.
+
 
 (* ---------- Helper Theorems -------------
  *)
@@ -1660,31 +1686,9 @@ Qed.
 
  
 
-(* Tacticals *)
-
-Ltac uncoerce_basic_H H :=
-  repeat (
-    simpl in H;
-    unfold CTermexp_of_nat in H;
-    unfold CTermexp_of_Texp in H;
-    unfold PTerm_of_R  in H
-    ).
-
-Ltac uncoerce_basic_goal :=
-  repeat (
-    simpl;
-    unfold CTermexp_of_nat;
-    unfold CTermexp_of_Texp;
-    unfold PTerm_of_R
-    ).
-
-Tactic Notation "uncoerce_basic" :=
-  uncoerce_basic_goal.
-
-Tactic Notation "uncoerce_basic" ident(H) :=
-  uncoerce_basic_H H.
 
 
   
 
 End PHL.
+
