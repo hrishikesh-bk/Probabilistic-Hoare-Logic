@@ -878,6 +878,28 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
                     ((snd ps) y)) ps) <{ while beta do s end }> (fun ps => ( gamma_leq gamma (Rmult tempR ((snd ps) y))) ps) *)
           )
 
+    | HWhileLB3 : forall (m : nat) (beta : bexp) (gamma: Assertion) (s : Cmd) (G : Vector.t Assertion m) (X : Vector.t R m) (P : Vector.t (Vector.t R m) m) (T : Vector.t R m),
+              (forall (i : nat), (i < m) -> (forall st, (List.nth i (Vector.to_list G) {{true}}) st -> Beval beta st))
+                -> (forall (i j : nat), (i < m) -> (j < i) -> (forall st, ~ (((List.nth i (Vector.to_list G) {{true}}) st) /\ ((List.nth j (Vector.to_list G) {{true}}) st))))
+                -> (forall (i : nat), (i < m) -> ((List.nth i (Vector.to_list T) 0%R) > 0)%R \/ exists (j : nat), (m > j) /\ (j > i) /\ ((List.nth j (Vector.to_list (List.nth i (Vector.to_list P) (const 0%R m))) 0%R) > 0)%R)
+                -> (forall i : nat, (i < m) -> 
+                      (hoare_triple (List.nth i (Vector.to_list (Vector.map int_true_eq_one G)) {{true}}) 
+                                          s 
+                       (antgeq2 i G (List.nth i (Vector.to_list P) (const 0%R m)) beta gamma (List.nth i (Vector.to_list T) (0%R)) ))
+              )
+                -> (forall (i:nat), (i < m) -> lin_ineq_lb i X P T)
+                -> (forall (i: nat) (y: string) (tempAssertion : Assertion) (tempR : R), 
+              (i < m) -> (forall st, (List.nth i (Vector.to_list G) {{true}}) st <-> tempAssertion st) ->
+              ((List.nth i (Vector.to_list X) 0%R) = tempR) ->
+              hoare_triple {{((prob (beta /\ tempAssertion)) >= y) /\ ((prob (beta /\ tempAssertion)) = (prob true)) }}
+                            <{ while beta do s end }>
+                            {{(prob gamma) >= (tempR*y) }}
+              (* hoare_triple (fun ps =>  (int_true_leq_R 
+                        (fun st => (Beval beta st) /\ (tempAssertion st)) 
+                    ((snd ps) y)) ps) <{ while beta do s end }> (fun ps => ( gamma_leq gamma (Rmult tempR ((snd ps) y))) ps) *)
+          )
+
+
 . 
 (* m = (S^m 0) *)
 
