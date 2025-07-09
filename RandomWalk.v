@@ -22,6 +22,8 @@ From Coq Require Import List.
 Import List.ListNotations.
 Import PHL.
 
+Module RandomWalk.
+
 Definition x : string := "x".
 Definition b : string := "b".
 Definition y1 : string := "y1".
@@ -100,11 +102,16 @@ Qed.
 
 Theorem ifthen_12 : forall (k : nat), (k > 0) -> hoare_triple ({{((prob (x = k)) = 0.75 /\ (prob (x = k)) = (prob true) ) /\ y2 = 0.75}}) (<{ x := x-1 }>) 
                                                     (fun ps :Pstate => (fst ps (fun st : state => ((k - 1) = fst st x)%nat) = snd ps y2)).
-Proof. intros. apply HConseqLeft with (eta2 := tasgn_pt x <{ x - 1 }> (fun ps :Pstate => (fst ps (fun st : state => ((k - 1) = fst st x)%nat) = snd ps y2))).
-        + intro. unfold tasgn_pt. unfold measure_sub_term. unfold assertion_sub_term. simpl. uncoerce_basic. replace (fst ps (fun st : state => ((k - 1)%nat) = ((x !-> (fst st x) - 1; (fst st)) x))) with (fst ps (fun st : state => ((k)%nat) = ((fst st x)))).
-          intro. transitivity (0.75%R). easy. easy. apply equivalence. intro. rewrite t_update_eq. split. lia. admit.
+Proof.  intros. apply HConseqLeft with (eta2 := tasgn_pt x <{ x - 1 }> (fun ps :Pstate => (fst ps (fun st : state => ((k - 1) = fst st x)%nat) = snd ps y2))).
+        + intro. unfold tasgn_pt. unfold measure_sub_term. unfold assertion_sub_term. simpl. uncoerce_basic. destruct (Nat.eq_dec k 1).
+          * rewrite e. simpl. replace (fst ps (fun st : state => 0 = ((x !-> (fst st x) - 1; (fst st)) x))) with (fst ps (fun st : state => 0 = fst st x \/ 1 = fst st x)). 
+            rewrite <- fin_additivity. intro. destruct H0. destruct H0.  apply measure_P_eq_true in H2. replace (fst ps (fun st : state => (0%nat) = (fst st x))) with (0%R).
+            transitivity 0.75%R. rewrite H0. lra. easy. symmetry. apply measure_inclusion_0 with (Q := (fun st : state => (1%nat) <> (fst st x))).
+            intro. lia. easy. intro. lia. apply equivalence. intro. rewrite t_update_eq. lia.
+          * replace (fst ps (fun st : state => ((k - 1)%nat) = ((x !-> (fst st x) - 1; (fst st)) x))) with (fst ps (fun st : state => ((k)%nat) = ((fst st x)))).
+          intro. transitivity (0.75%R). easy. easy. apply equivalence. intro. rewrite t_update_eq. split. lia. lia. 
         + apply HTAsgn. 
-Admitted.
+Qed.
 
 Theorem ifthen_1_int : forall (k : nat), (k > 0) -> hoare_triple ({{((((prob (x = k /\ b)) = 0.25 /\ (prob (x = k /\ b)) = (prob b) ) /\ ((prob (x = k /\ ~b)) = 0.75 /\ (prob (x = k /\ ~b)) = (prob ~b) ))/\ y1 = 0) /\ y2 = 0.75}})
               (<{if b then x := x + 1 else x := x - 1 end}>)
@@ -402,7 +409,7 @@ Proof. intros m n i H. induction m.
             simpl. unfold P_vector_int in IHm. simpl in IHm. rewrite IHm. replace ((S m) <? i) with Datatypes.true.
             replace ((S m) <? (S i)) with Datatypes.true. replace ((S (S m)) <? i) with Datatypes.false.
             replace ((3 ^ (i - 1)) - 1)%R with ((3 * (3 ^ m)) - 1)%R. rewrite Rplus_0_r. reflexivity.
-            replace (i - 1) with (S m)%nat. Search (pow _ (S _)). rewrite tech_pow_Rmult. easy. lia. 
+            replace (i - 1) with (S m)%nat.  rewrite tech_pow_Rmult. easy. lia. 
             symmetry. apply Nat.ltb_nlt. lia. symmetry. apply Nat.ltb_lt. lia. symmetry. apply Nat.ltb_lt. lia. symmetry. apply Nat.eqb_eq. lia. symmetry. apply Nat.eqb_neq. lia.
           * destruct (Nat.eq_dec (S m) (S i)).
             ** unfold P_vector_int. replace ((S m) =? (S i)) with Datatypes.true. simpl. unfold P_vector_int in IHm. simpl in IHm. rewrite IHm.
@@ -411,7 +418,7 @@ Proof. intros m n i H. induction m.
                 lia. symmetry. apply Nat.ltb_nlt. lia. symmetry. apply Nat.ltb_nlt. lia. symmetry. apply Nat.ltb_lt. lia. symmetry. apply Nat.ltb_nlt. lia. symmetry. apply Nat.eqb_eq. lia.
             ** unfold P_vector_int. replace ((S m) =? S i) with Datatypes.false. replace ((S (S m)) =? i) with Datatypes.false.
                 simpl. unfold P_vector_int in IHm. simpl in IHm. rewrite IHm. rewrite Rmult_0_l. rewrite Rplus_0_l.
-                Search "dec" in Nat. Search "dec" in Bool. destruct (bool_dec ((S m) <? i) Datatypes.true).
+                destruct (bool_dec ((S m) <? i) Datatypes.true).
                   -  rewrite e. replace ((S (S m)) <? i) with (Datatypes.true). reflexivity. symmetry. apply Nat.ltb_lt. apply Nat.ltb_lt in e. lia.
                   - replace ((S m) <? i) with Datatypes.false. replace ((S (S m)) <? i) with (Datatypes.false). apply not_true_is_false in n2. apply Nat.ltb_nlt in n2.
                           destruct (bool_dec (m <? S i) Datatypes.true).
@@ -470,7 +477,6 @@ Proof. induction n.
                 ** replace (n =? 0) with Datatypes.true. simpl. apply IHn. lia. symmetry. apply Nat.eqb_eq. lia.
                 ** replace (n =? 0) with Datatypes.false. simpl. apply IHn. lia. symmetry. apply Nat.eqb_neq. lia.
 Qed. 
-
 
 Lemma helper1 : forall (n i : nat), (i < n) -> (forall st : state, (List.nth i (to_list (G_vector n)) (fun st : state => True) st) -> (Beval (Leq (Const 1) (Var x)) st)).
 Proof. induction n.
@@ -612,7 +618,7 @@ Lemma helper6_int : forall (n i : nat), (i > 0) -> (nth (i - 1) (Vector.to_list 
 Proof. intro. induction i.
         + assert (~ (0 < 0)). lia. contradiction.
         + intro. rewrite helperXvec. unfold nth. destruct (Nat.eq_dec ((S i) - 1) 0).
-            * replace ((S i)-1) with 0. assert (S i = 1). lia. rewrite H0. Search (_ ^ 1). replace (3 ^ 1)%R with 3%R. easy. lra.   
+            * replace ((S i)-1) with 0. assert (S i = 1). lia. rewrite H0. replace (3 ^ 1)%R with 3%R. easy. lra.   
             * assert (T: forall (k : nat), k <>0 -> exists k1, k = (S k1)).
               - intro. destruct k. contradiction. intro. exists k. reflexivity.
               - assert (exists k1 : nat, (S i) - 1 = (S k1)). apply T. apply n0. inversion H0. rewrite H1.
@@ -783,51 +789,98 @@ Proof. intros. eapply HWhileLB3 with (m := n) (G := G_vector n) (T := T_vector n
         + intros. unfold lin_ineq_lb. simpl. rewrite helperPvec1. 
               unfold X_vector.  destruct (Nat.eq_dec (n - i) 1).
             - rewrite e. unfold X_vector. rewrite helperVecSumi1. rewrite helperTvec. rewrite helperXvec1. apply Req_le.
-              replace (n =? (i + 1)) with Datatypes.true. rewrite e. admit. symmetry. apply Nat.eqb_eq. lia. easy. easy.
+              replace (n =? (i + 1)) with Datatypes.true. rewrite e.
+              destruct n. 
+              ** assert (~ (0 > 0)). lia. contradiction.
+              ** destruct n.
+                  *** simpl. lra.
+                  *** simpl. lra.
+              ** symmetry. apply Nat.eqb_eq. lia. 
+              ** easy.
+              ** easy.
             - rewrite helperVecSum. rewrite helperXvec1. destruct (Nat.eq_dec (n - i) n).
-              ** replace i with 0. replace (S n <? (n - 0)) with Datatypes.false. replace (n <? S (n - 0)) with Datatypes.true. rewrite helperTvec. replace (n =? (0 + 1)) with Datatypes.false. admit. 
-                  symmetry. apply Nat.eqb_neq. lia. easy. symmetry. apply Nat.ltb_lt. lia. symmetry. apply Nat.ltb_nlt. lia.  lia. 
+              ** replace i with 0. replace (S n <? (n - 0)) with Datatypes.false. replace (n <? S (n - 0)) with Datatypes.true. rewrite helperTvec. replace (n =? (0 + 1)) with Datatypes.false. simpl. rewrite Rplus_0_r.
+                  rewrite sub_0_r. apply Req_le. apply Rmult_eq_reg_l with (r := ((3 ^ (n + 1)) - 1)%R). replace (((3 ^ (n + 1)) - 1) * (1 - (((3 ^ n) - 1) / ((3 ^ (n + 1)) - 1))))%R with (3^(n + 1) - 3^n)%R.
+                   rewrite Rmult_comm. rewrite Rmult_assoc. rewrite Rmult_minus_distr_r. rewrite Rdiv_def. rewrite Rmult_1_l. rewrite Rmult_assoc. 
+                    replace ((/ ((3 ^ (n + 1)) - 1)) * ((3 ^ (n + 1)) - 1))%R with (((3 ^ (n + 1)) - 1)*(/ ((3 ^ (n + 1)) - 1)))%R. rewrite <- Rmult_assoc. rewrite Rmult_inv_r_id_l.
+                    replace (((3 ^ (n + 1)) - 1) - ((3 ^ (n - 1)) - 1))%R with ((3 ^ (n + 1)) - ((3 ^ (n - 1))))%R by lra. 
+                    apply Rmult_eq_reg_l with (r := (/ 3 ^(n - 1))%R). rewrite Rmult_minus_distr_l. rewrite <- Rmult_assoc. replace ((/ (3 ^ (n - 1))) * 0.75)%R with (0.75*(/ (3 ^ (n - 1))))%R by lra. rewrite Rmult_assoc.  rewrite Rmult_minus_distr_l.
+                    rewrite <- Rpower_pow. rewrite <- Rpower_pow. rewrite <- Rpower_pow. 
+                    rewrite <- Rpower_Ropp. rewrite <- Rpower_plus. rewrite <- Rpower_plus. rewrite <- Rpower_plus. rewrite Rplus_comm.
+                    replace ((- (INR (n - 1))) + (INR n))%R with ((INR n) + (- (INR (n - 1))))%R by lra. replace ((- (INR (n - 1))) + (INR (n - 1)))%R with 0%R by lra.
+                    rewrite <- Rminus_def. rewrite <- Rminus_def. rewrite minus_INR. rewrite plus_INR. simpl. replace (((INR n) + 1) - ((INR n) - 1))%R with 2%R by lra.
+                    replace ((INR n) - ((INR n) - 1))%R with 1%R by lra. rewrite Rpower_O. replace (0.75)%R with (3/4)%R by lra. apply Rmult_eq_reg_l with (r := 4%R).
+                    rewrite <- Rmult_assoc. replace (4 * (3 / 4))%R with 3%R by lra. replace 4%R with (3 + 1)%R by lra. rewrite Rmult_minus_distr_l. rewrite Rmult_minus_distr_l.
+                    rewrite Rmult_plus_distr_r. rewrite Rmult_plus_distr_r. rewrite Rmult_1_l. rewrite Rmult_1_l. rewrite Rmult_1_r. rewrite Rpower_1 with (x := 3%R).
+                    replace (2)%R with (1 + 1)%R by lra. rewrite Rpower_plus. rewrite Rpower_1 with (x := 3%R). lra. lra. lra. lra. lra. easy. lra. lra. lra.
+                    apply Rinv_neq_0_compat. apply pow_nonzero. lra.  
+                    assert (T: forall (z : nat), (((3^(z + 1)) - 1) > 0)%R). induction z as [| z' IHz]. simpl. lra. simpl. lra. apply Rgt_not_eq. apply T.
+                    lra. rewrite Rmult_minus_distr_l. rewrite Rdiv_def. rewrite <- Rmult_assoc. rewrite Rmult_inv_r_id_m. lra.
+                    assert (T: forall (z : nat), (((3^(z + 1)) - 1) > 0)%R). induction z as [| z' IHz]. simpl. lra. simpl. lra. apply Rgt_not_eq. apply T.
+                    assert (T: forall (z : nat), (((3^(z + 1)) - 1) > 0)%R). induction z as [| z' IHz]. simpl. lra. simpl. lra. apply Rgt_not_eq. apply T.
+                    symmetry. apply Nat.eqb_neq. lia. easy. symmetry. apply Nat.ltb_lt. lia. symmetry. apply Nat.ltb_nlt. lia.  lia. 
               ** unfold X_vector. replace ((S n) <? (n - i)) with Datatypes.false.
-              replace (n <? (S (n - i))) with Datatypes.false. rewrite helperTvec. replace (n =? (i + 1)) with Datatypes.false. admit.
+              replace (n <? (S (n - i))) with Datatypes.false. rewrite helperTvec. replace (n =? (i + 1)) with Datatypes.false. simpl. 
+              
+              apply Req_le. rewrite Rplus_0_r. apply Rmult_eq_reg_l with (r := ((3 ^ (n + 1)) - 1)%R). rewrite Rmult_minus_distr_l. rewrite Rdiv_def. rewrite <- Rmult_assoc. rewrite Rmult_inv_r_id_m.
+              replace (((((3 ^ (n + 1)) - 1) * 1) - ((3 ^ (n - i)) - 1))%R) with (((3 ^ (n + 1)) - ((3 ^ (n - i))))%R) by lra.
+              transitivity (((3 ^ (n + 1)) - 1)*(0.75 * (1 - (((3 ^ ((n - i) - 1)) - 1) / ((3 ^ (n + 1)) - 1)))) + ((3 ^ (n + 1)) - 1)*(0.25 * (1 - (((3 ^ ((n - i) + 1)) - 1) / ((3 ^ (n + 1)) - 1)))))%R.
+              rewrite <- Rmult_assoc. rewrite <- Rmult_assoc.  replace (((3 ^ (n + 1)) - 1) * 0.75)%R with (0.75*((3 ^ (n + 1)) - 1))%R by lra. replace (((3 ^ (n + 1)) - 1) * 0.25)%R with (0.25*((3 ^ (n + 1)) - 1))%R by lra.
+              rewrite Rmult_assoc. rewrite Rmult_assoc. rewrite Rmult_minus_distr_l. rewrite Rdiv_def. rewrite <- Rmult_assoc. rewrite Rmult_inv_r_id_m.
+              rewrite Rdiv_def. replace (((3 ^ (n + 1)) - 1) * (1 - (((3 ^ ((n - i) + 1)) - 1) * (/ ((3 ^ (n + 1)) - 1)))))%R with ((((3 ^ (n + 1)) - 1) * 1) - ((3 ^ (n + 1)) - 1)*(((3 ^ ((n - i) + 1)) - 1) * (/ ((3 ^ (n + 1)) - 1))))%R by lra.
+              rewrite <- Rmult_assoc. rewrite Rmult_inv_r_id_m. rewrite Rmult_1_r. rewrite Rminus_def. replace ((3 ^ (n + 1)) - 1)%R with ((3 ^ (n + 1)) + (- 1))%R by lra. replace ((3 ^ ((n - i) - 1)) - 1)%R with ((3 ^ ((n - i) - 1)) + (- 1))%R by lra.
+               replace ((3 ^ ((n - i) + 1)) - 1)%R with ((3 ^ ((n - i) + 1)) + (- 1))%R by lra. rewrite Rminus_plus_r_r. rewrite Rminus_plus_r_r. replace (0.75%R) with (3/4)%R by lra. replace (0.25%R) with (1/4)%R by lra.
+              apply Rmult_eq_reg_l with (r := 4%R). rewrite Rmult_plus_distr_l. rewrite Rmult_plus_distr_l. rewrite Rdiv_def. rewrite Rdiv_def. replace (4 * ((3 * (/ 4)) * ((3 ^ (n + 1)) - (3 ^ ((n - i) - 1)))))%R with ((4 * (3 * (/ 4))) * ((3 ^ (n + 1)) - (3 ^ ((n - i) - 1))))%R by lra.
+              replace (4 * ((1 * (/ 4)) * ((3 ^ (n + 1)) - (3 ^ ((n - i) + 1)))))%R with ((4 * (1 * (/ 4))) * ((3 ^ (n + 1)) - (3 ^ ((n - i) + 1))))%R by lra. rewrite <- Rmult_assoc. rewrite Rmult_inv_r_id_m. rewrite <- Rmult_assoc. rewrite Rmult_inv_r_id_m.
+              replace 4%R with (3 + 1)%R. rewrite Rmult_minus_distr_l. rewrite Rmult_1_l. rewrite Rmult_plus_distr_r. rewrite Rmult_plus_distr_r. rewrite Rmult_1_l. rewrite Rmult_1_l. rewrite tech_pow_Rmult. rewrite tech_pow_Rmult. rewrite <- Ropp_mult_distr_r. rewrite tech_pow_Rmult.
+              rewrite Rplus_assoc. rewrite Rminus_def. rewrite Rplus_assoc.  apply Rplus_eq_compat_l. rewrite Rminus_def. rewrite <- Rplus_assoc. rewrite <- Rplus_assoc.
+              replace ((- (3 ^ (S ((n - i) - 1)))) + (3 ^ (n + 1)))%R with ((3 ^ (n + 1)) + (- (3 ^ (S ((n - i) - 1)))))%R by lra. rewrite Rplus_assoc. rewrite Rplus_assoc. rewrite Rplus_eq_compat_l with (r := (3 ^ (n + 1))%R) (r2 :=((- (3 ^ (S ((n - i) - 1)))) + (- (3 ^ ((n - i) + 1))))%R ). lra.
+              replace ((n-i) + 1)%nat with (S (n - i)) by lia. replace (S ((n - i) - 1))%nat with (n - i) by lia. apply Rplus_comm. lra. lra. lra. lra. 
+              assert (T: forall (z : nat), (((3^(z + 1)) - 1) > 0)%R). induction z as [| z' IHz]. simpl. lra. simpl. lra. apply Rgt_not_eq. apply T. 
+              assert (T: forall (z : nat), (((3^(z + 1)) - 1) > 0)%R). induction z as [| z' IHz]. simpl. lra. simpl. lra. apply Rgt_not_eq. apply T. lra.
+              assert (T: forall (z : nat), (((3^(z + 1)) - 1) > 0)%R). induction z as [| z' IHz]. simpl. lra. simpl. lra. apply Rgt_not_eq. apply T. 
+              assert (T: forall (z : nat), (((3^(z + 1)) - 1) > 0)%R). induction z as [| z' IHz]. simpl. lra. simpl. lra. apply Rgt_not_eq. apply T.          
               symmetry. apply Nat.eqb_neq. lia. easy. symmetry. apply Nat.ltb_nlt. lia. symmetry. apply Nat.ltb_nlt. lia.
               ** easy.
               ** lia.  
             - easy.
         + lia. 
-        + intros. Search "iff" in Logic. apply iff_trans with ( B:= ((CBoolexp_of_bexp ((Eq (Const 1) (Var x)))) st)). apply helper5. easy. easy.
+        + intros. apply iff_trans with ( B:= ((CBoolexp_of_bexp ((Eq (Const 1) (Var x)))) st)). apply helper5. easy. easy.
         + rewrite helper6. lra. easy. 
-Admitted.
+Qed.
 
-(* Theorem Espline_term_y : forall (n : nat), (n > 0) -> hoare_triple ({{(prob (x = 1)) >= y1 /\ (prob (x = 1)) = (prob true)}}) 
-      (While (Leq (Const 1) (Var x)) (CSeq (uniform_xplus1) (<{if val = 0 then x := 0 else x := x + 1 end}>)) )
- (fun ps : Pstate => ((1 - (1/(INR n + 1)))*(snd ps y1) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R).
+Theorem Rwalk_term_y : forall (n : nat), (n > 0) -> hoare_triple ({{(prob (x = 1)) >= y1 /\ (prob (x = 1)) = (prob true)}}) 
+      (While (Leq (Const 1) (Var x)) (<{ b toss 0.25;
+    if b then x := x + 1 else x := x - 1 end
+}>) )
+ (fun ps : Pstate => ((1 - (2 /(3^ (n + 1) - 1)))*(snd ps y1) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R).
 Proof. intros. apply HConseqLeft with (eta2 := (fun st : Pstate =>
      (((PTermexp_of_pterm (Pvar y1) st) <=
        (Pteval (Pint (fun st0 : state => (CBoolexp_of_bexp (Leq (Const 1) (Var x)) st0) /\ ((CBoolexp_of_bexp ((Eq (Const 1) (Var x)))) st0))) st))%R) /\
      ((Pteval (Pint (fun st0 : state => (CBoolexp_of_bexp (Leq (Const 1) (Var x)) st0) /\ ((CBoolexp_of_bexp ((Eq (Const 1) (Var x)))) st0))) st) =
       (Pteval (Pint {{true}}) st)))). intro. uncoerce_basic. 
         replace (fst ps (fun st0 : state => ((1 <= (fst st0 x))%nat) /\ ((1%nat) = (fst st0 x)))) with (fst ps (fun st : state => (1%nat) = (fst st x))). 
-         easy. apply equivalence. intro. lia. apply Espline_term_int. easy. easy. easy.
+         easy. apply equivalence. intro. lia. apply Rwalk_term_int. easy. easy. easy.
 Qed.
 
-Theorem Espline_term_elim_y : forall (n : nat), (n > 0) ->  hoare_triple ({{(prob (x = 1)) >= 1 /\ (prob (x = 1)) = (prob true)}}) 
-      (While (Leq (Const 1) (Var x)) (CSeq (uniform_xplus1) (<{if val = 0 then x := 0 else x := x + 1 end}>)) )
- (fun ps : Pstate => ((1 - (1/(INR n + 1))) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R).
-Proof. intros. apply HConseq with (eta2 := eta_update_y_p ({{(prob (x = 1)) >= y1 /\ (prob (x = 1)) = (prob true)}}) y1 1%R) (eta3 := eta_update_y_p (fun ps : Pstate => ((1 - (1/(INR n + 1)))*(snd ps y1) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R) y1 1%R).
-          + intro. uncoerce_basic. unfold eta_update_y_p. unfold pstate_update. unfold Pteval. intro. simpl. rewrite t_update_eq. easy.
-          + intro. uncoerce_basic. unfold eta_update_y_p. unfold pstate_update. unfold Pteval. simpl. rewrite t_update_eq. rewrite Rmult_1_r. easy.
-          + apply eliminate_y. easy. easy. apply HConseqLeft with (eta2 := ({{(prob (x = 1)) >= y1 /\ (prob (x = 1)) = (prob true)}})).
-            * intro. uncoerce_basic. easy.
-            * apply Espline_term_y. easy.
+Theorem Rwalk_term : forall (n : nat), (n > 0) ->  hoare_triple ({{(prob (x = 1)) = 1 /\ (prob (x = 1)) = (prob true)}}) 
+      RandomWalk
+ (fun ps : Pstate => ((1 - (2 /(3^ (n + 1) - 1))) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R).
+Proof. intros. 
+          apply HConseqLeft with (eta2 := ({{(prob (x = 1)) >= 1 /\ (prob (x = 1)) = (prob true)}})).
+            - intro. uncoerce_basic. lra. 
+            - apply HConseq with (eta2 := eta_update_y_p ({{(prob (x = 1)) >= y1 /\ (prob (x = 1)) = (prob true)}}) y1 1%R) (eta3 := eta_update_y_p (fun ps : Pstate => ((1 - (2 /(3^ (n + 1) - 1)))*(snd ps y1) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R) y1 1%R).
+              + intro. uncoerce_basic. unfold eta_update_y_p. unfold pstate_update. unfold Pteval. intro. simpl. rewrite t_update_eq. easy.
+              + intro. uncoerce_basic. unfold eta_update_y_p. unfold pstate_update. unfold Pteval. simpl. rewrite t_update_eq. rewrite Rmult_1_r. easy.
+              + apply eliminate_y. easy. easy. apply HConseqLeft with (eta2 := ({{(prob (x = 1)) >= y1 /\ (prob (x = 1)) = (prob true)}})).
+                * intro. uncoerce_basic. easy.
+                * apply Rwalk_term_y. easy.
 Qed.
 
-Theorem Espline_term : forall (n : nat), (n > 0) -> hoare_triple ({{(prob true) = 1}}) (Escaping_spline) (fun ps : Pstate => ((1 - (1/(INR n + 1))) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R).
-Proof. intros. apply HSeq with (eta2 := ({{(prob (x = 1)) = 1 /\ (prob (x = 1)) = (prob true)}})).
-        + apply HConseqLeft with (eta2 := tasgn_pt x 1 ({{(prob (x = 1)) = 1 /\ (prob (x = 1)) = (prob true)}})).
-          * intro. uncoerce_basic. unfold tasgn_pt. unfold measure_sub_term. unfold assertion_sub_term. unfold Teval.
-            simpl. replace (fst ps (fun st : state => 1 = ((x !-> 1; (fst st)) x))) with (fst ps {{true}}). easy. apply equivalence. intro. rewrite t_update_eq. lia.
-          * apply HTAsgn.
-        + apply HConseqLeft with (eta2 := ({{(prob (x = 1)) >= 1 /\ (prob (x = 1)) = (prob true)}})).
+(* Theorem Rwalk_term : forall (n : nat), (n > 0) -> hoare_triple ({{(prob true) = 1}}) (RandomWalk) (fun ps : Pstate => ((1 - (1/(INR n + 1))) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R).
+Proof. intros. apply HConseqLeft with (eta2 := ({{(prob (x = 1)) >= 1 /\ (prob (x = 1)) = (prob true)}})).
           * intro. uncoerce_basic. lra.
           * apply Espline_term_elim_y. easy.
-Qed. *)
+Qed. *) 
+
+End RandomWalk.

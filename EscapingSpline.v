@@ -377,8 +377,8 @@ Proof. intros m n i H. induction m.
               - assert (exists k1 : nat, m = (S k1)). apply T. apply n0. inversion H0. rewrite H1.
                 unfold P_vector_int in IHm. unfold X_vector in IHm. unfold X_vector_int in IHm. rewrite H1 in IHm. unfold X_vector_int.
                 rewrite IHm. rewrite <- H1. rewrite e. replace (m <? i) with (Datatypes.true).
-                replace (i <? i) with (Datatypes.false). rewrite <- e. rewrite Rplus_0_r. Search INR. replace (S m) with (m + 1)%nat. rewrite plus_INR.
-                rewrite INR_1. easy. lia. Search "ltb" in Nat. symmetry. apply ltb_irrefl. symmetry. apply ltb_lt. lia.
+                replace (i <? i) with (Datatypes.false). rewrite <- e. rewrite Rplus_0_r. replace (S m) with (m + 1)%nat. rewrite plus_INR.
+                rewrite INR_1. easy. lia. symmetry. apply ltb_irrefl. symmetry. apply ltb_lt. lia.
             ** symmetry. apply Nat.eqb_eq. easy.
          * replace ((S m) =? i) with Datatypes.false. simpl. destruct (Nat.eq_dec m 0).
             ** unfold X_vector_int. rewrite e. simpl. replace (1 <? i) with (Datatypes.true). rewrite Rplus_0_r. rewrite Rmult_0_l. easy. symmetry. 
@@ -393,7 +393,7 @@ Qed.
 
 Lemma helperVecSum_int1 : forall (n i : nat), (i > 0) -> (i <= n) -> (vector_sum (zip Rmult  (P_vector_int n (S i)) (X_vector n))) = ((1 - (1/ INR (S i)))*(1 - (INR (S i))/(INR n + 1)))%R.
 Proof. intros. unfold X_vector. rewrite helperVecSum. destruct (Nat.eq_dec n i).
-        + rewrite e. replace (i <? (S i)) with (Datatypes.true). Search INR. rewrite S_INR. field. rewrite <- S_INR. Search INR. rewrite <- INR_0. apply not_INR. lia.
+        + rewrite e. replace (i <? (S i)) with (Datatypes.true). rewrite S_INR. field. rewrite <- S_INR. rewrite <- INR_0. apply not_INR. lia.
           symmetry. rewrite ltb_lt. lia. 
         + replace ( n <? S i ) with (Datatypes.false). easy. symmetry. rewrite ltb_nlt. lia.
         + lia.
@@ -461,8 +461,8 @@ Proof. intros. replace (nth i (to_list (G_vector n)) (fun st => True) st) with (
 Qed.
 
 Lemma helper3 : forall (i n : nat), (i < n) ->  ((List.nth i (to_list (T_vector n)) (0%R)) > 0)%R.
-Proof. intros. rewrite helperTvec. rewrite Rdiv_1_l. Search "lt_gt". apply Rlt_gt. apply Rinv_0_lt_compat. apply Rplus_lt_0_compat.
-       Search INR. rewrite <- INR_0. Search INR. apply lt_INR. lia. lra. easy.
+Proof. intros. rewrite helperTvec. rewrite Rdiv_1_l. apply Rlt_gt. apply Rinv_0_lt_compat. apply Rplus_lt_0_compat.
+       rewrite <- INR_0. apply lt_INR. lia. lra. easy.
 Qed. 
 
 Lemma helper4 : forall (n m: nat), (n > 0) -> hoare_triple (int_true_eq_one (CBoolexp_of_bexp (<{x = n}>)))
@@ -487,7 +487,7 @@ Proof. intro. induction m.
                       rewrite e0. intro. apply Req_ge. symmetry. transitivity (fst ps (fun st : state => (fst st x) = (((0 + 1) + 1)%nat))).
                       rewrite add_0_l in H2. rewrite INR_1 in H2. apply H2. apply equivalence. intro. lia.
                       assert (exists x1 : nat, x0 = (S x1)). apply T. lia. inversion H2.  rewrite H3. intro.
-                      apply Req_ge. symmetry. transitivity (fst ps (fun st : state => (fst st x) = ((((S x1) + 1) + 1)%nat))). Search INR. rewrite <- S_INR. replace (S (S x1)) with ((S x1) + 1)%nat. apply H4. lia.
+                      apply Req_ge. symmetry. transitivity (fst ps (fun st : state => (fst st x) = ((((S x1) + 1) + 1)%nat))). rewrite <- S_INR. replace (S (S x1)) with ((S x1) + 1)%nat. apply H4. lia.
                       apply equivalence. intro. lia.
                   ** uncoerce_basic. apply body1.  
             -- apply IHm. easy. 
@@ -639,17 +639,22 @@ Proof. intros. eapply HWhileLB2 with (m := n) (G := G_vector n) (T := T_vector n
        PAssertion) st)))) (eta3 := (fun ps : Pstate => ((1/((INR (n - i)) + 1))%R = fst ps (fun st : state => ((fst st) x) = 0%nat))%R)). 
               -- intro. unfold int_true_eq_one.  uncoerce_basic. unfold CBoolexp_of_bexp. unfold Beval. unfold Teval. 
                   replace (fst ps (fun st2 : state => (fst st2 x) = (n - i))) with (fst ps (fun st : state => (n - i) = (fst st x))). easy. apply equivalence. intro. lia. 
-              -- intro. intro. replace (fst ps (fun st : state => (~ (CBoolexp_of_bexp b0 st)) /\ ((fst st x) = (0%nat)))) with (fst ps (fun st : state => (fst st x) = 0)).
+              -- intro. intro. replace (fst ps (fun st : state => (~ (CBoolexp_of_bexp b2 st)) /\ ((fst st x) = (0%nat)))) with (fst ps (fun st : state => (fst st x) = 0)).
                  rewrite <- H3. lra. apply equivalence. intro. unfold CBoolexp_of_bexp. rewrite H0. unfold Beval. unfold Teval. lia.
               -- apply body0 with (k := n - i). 
             - easy. 
         + intros. unfold lin_ineq_lb. simpl. rewrite helperXvect1. rewrite helperVecSum_int1. rewrite helperTvec. rewrite helperXvec1. apply Req_le. 
-          admit. 
-          easy. easy. lia. lia. easy.
+          rewrite Rmult_minus_distr_l. rewrite Rmult_1_r. rewrite Rmult_minus_distr_r. rewrite Rmult_1_l. rewrite Rdiv_1_l. replace ((INR (S (n - i))) / ((INR n) + 1))%R with ((INR (S (n - i))) * ( / ((INR n) + 1)))%R by lra.
+          replace ((/ (INR (S (n - i)))) * ((INR (S (n - i))) * (/ ((INR n) + 1))))%R with (((INR (S (n - i))) * (/ ((INR n) + 1)))*(/ (INR (S (n - i)))))%R by lra. rewrite Rmult_inv_r_id_m. rewrite Rminus_def. rewrite Rminus_def.
+          rewrite Rminus_def. replace (S (n - i)) with ((n - i) + 1)%nat by lia. replace ((1 + (- (/ (INR ((n - i) + 1))))) + (- (((INR ((n - i) + 1)) * (/ ((INR n) + 1))) - (/ ((INR n) + 1)))))%R with ((- (((INR ((n - i) + 1)) * (/ ((INR n) + 1))) - (/ ((INR n) + 1)))) + (1 + (- (/ (INR ((n - i) + 1))))))%R by lra. rewrite Rplus_assoc. rewrite Rdiv_1_l.
+          replace ((1 + (- (/ (INR ((n - i) + 1))))) + (/ ((INR (n - i)) + 1)))%R with (1 + ((- (/ (INR ((n - i) + 1)))) + (/ ((INR (n - i)) + 1))))%R by lra. replace ((- (/ (INR ((n - i) + 1)))) + (/ ((INR (n - i)) + 1)))%R with ((/ ((INR (n - i)) + 1)) + (- (/ (INR ((n - i) + 1)))))%R by lra. rewrite <- Rminus_def. rewrite <- Rminus_def. 
+          rewrite plus_INR. rewrite INR_1. rewrite Rminus_diag. rewrite Rplus_0_r. rewrite Rminus_def. rewrite Rminus_def.
+          replace (- (/ ((INR n) + 1)))%R with ((-1)*((/ ((INR n) + 1))))%R by lra. rewrite <- Rmult_plus_distr_r. replace (((INR (n - i)) + 1) + (-1))%R with ((INR (n - i)))%R by lra. rewrite Rdiv_def. lra. rewrite <- INR_0. apply not_0_INR. lia. easy. easy. lia. lia. easy. 
         + lia. 
-        + intros. Search "iff" in Logic. apply iff_trans with ( B:= ((CBoolexp_of_bexp ((Eq (Const 1) (Var x)))) st)). apply helper5. easy. easy.
+        + intros. apply iff_trans with ( B:= ((CBoolexp_of_bexp ((Eq (Const 1) (Var x)))) st)). apply helper5. easy. easy.
         + rewrite helper6. rewrite Rdiv_def. lra. easy.
-Admitted.
+Qed.
+
 
 Theorem Espline_term_y : forall (n : nat), (n > 0) -> hoare_triple ({{(prob (x = 1)) >= y1 /\ (prob (x = 1)) = (prob true)}}) 
       (While (Leq (Const 1) (Var x)) (CSeq (uniform_xplus1) (<{if val = 0 then x := 0 else x := x + 1 end}>)) )
