@@ -571,7 +571,7 @@ Theorem xgeq1_n_UB: forall (x0: string) (n: nat), (n >= 1) ->
                                                                  ({{ ((prob (x0 = (n - 1))) <= twothird) }})) /\
                 (hoare_triple ({{ ((prob (x0 = n)) = 1) /\ ((prob (x0 = n)) = (prob true)) }}) 
                                                                             (GamblersRuin_Body x0) 
-                                                                 ({{ ((prob (x0 =n )) <= 0) }}))                                                                                                             /\
+                                                                 ({{ ((prob (x0 =n )) <= 0) }})) /\
                 (hoare_triple ({{ ((prob (x0 = n)) = 1) /\ ((prob (x0 = n)) = (prob true)) }}) 
                                                                             (GamblersRuin_Body x0) 
                                                                  ({{ ((prob (x0 = (n + 1))) <= onethird) }}))
@@ -758,7 +758,7 @@ Eval cbn in Gs_hlpr 3 1 x.
 (* 1,2...,max - P[i] = [0 ; 0 ... ; (i-1)->2/3 ; 0 ;  (i+1)->1/3 ; 0 ; 0...] *)
 Definition Ps (max: nat): (Vector.t ( Vector.t R (S max))  (S max)):=
 map (P_i max) (_0ton (S max)).
-Eval cbn in (Ps 3).
+Eval cbn in (Ps 2).
 
 (* 1,2....max - T[i] = 0 if i < max; 1/3 if max *)
 Definition Ts (max: nat): Vector.t R max :=
@@ -777,6 +777,7 @@ unfold inner_conj_leq;
 simpl; 
 unfold gamma_leq; unfold gamma_compare
     ).
+
 
 
 Theorem ant_1to3 (x0: string) : forall (i: nat), (i < 3) ->
@@ -861,6 +862,7 @@ Definition seventh := (1/7)%R.
  
 Definition y: string := "y".
 
+
 Theorem Gambler3_UB: hoare_triple ({{ ((prob (x = 1)) = y) /\ ((prob (x = 1)) =  (prob true)) /\ y = 1 }}) (GamblersRuin 3) ({{ (prob (x >= 3)) <= seventh}}).
 Proof.
 uncoerce_basic.
@@ -896,10 +898,10 @@ eapply HWhileUB with (i:= 1) (m := 3) (beta := beta) (gamma := gamma) (G := G) (
   -- intros. simpl. split. easy. easy.
   -- simpl. lra.
 Qed.
-       
 
-Fixpoint Gvec (n : nat) : (Vector.t Assertion n) := 
-  match n with
-    | 0 => []
-    | S m => (\{ x = m  \})::(Gvec m) (* n-1 ---> 0 *)
-end.
+
+
+
+
+
+   
