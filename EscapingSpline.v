@@ -1,4 +1,3 @@
-Print Libraries.
 From PHL Require Import Maps.
 From PHL Require Import PHLTest.
 From PHL Require Import Uniform.
@@ -7,15 +6,12 @@ From Coq Require Import Arith.
 From Coq Require Import EqNat.
 From Coq Require Import PeanoNat. Import Nat.
 From Coq Require Import Lia.
-(*From PLF Require Export Imp.*)
-(*From PLF Require Export Hoare.*)
 From Coq Require Import Reals.
 From Coq Require Import Logic.FunctionalExtensionality.
 From Coq Require Import Logic.PropExtensionality.
 From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
-(* From Coq Require Import List. *)
 Import Vector.VectorNotations.
 From Coq Require Import Vector.
 From Coq Require Import Notations.
@@ -313,9 +309,7 @@ Fixpoint vreverse {T : Type} {n} (v : t T n) : t T n :=
               _ (f_equal S ( plus_n_O _))
   end.
 
-(* Definition G_vector (n : nat) : (Vector.t Assertion n) := vreverse (G_vector_r n).
 
-Definition G_list (n : nat) : list Assertion := rev (G_list_r n). *)
 Lemma helperGvec : forall (n : nat), to_list (G_vector (S n)) = CBoolexp_of_bexp (Eq (Const (S n)) (Var x)) :: to_list (G_vector n).
 Proof. intro. unfold G_vector. unfold to_list. easy.
 Qed.
@@ -529,77 +523,12 @@ Lemma helper6 : forall (n : nat), (n > 0) -> (nth (n - 1) (Vector.to_list (X_vec
 Proof. unfold X_vector. intro. apply helper6_int with (i := n).
 Qed.
            
-(* 
-Lemma helper5 : forall (i n m : nat), (n > 0) -> (i < n) -> hoare_triple (nth i (to_list (Vector.map int_true_eq_one (G_vector n))) (fun ps => True)) 
-(CSeq (uniform_xplus1) <{if val = 0 then x := 0 else x := (x + 1) end}>)
-(nth i
-     (to_list
-        (antecedent_geq (G_vector n) (P_vector n m) (Leq (Const 1) (Var x)) (fun st : state => (fst st x) = 0)
-           (T_vector n))) (fun ps => True)). *)
-
-(* Lemma helper5 : forall (i n : nat), (n > 0) -> (i < n) -> 
-    PAImplies (fun ps : Pstate => (inner_conj_geq (G_vector n) (P_vector_int n (S (n - i))) ps) /\ ((fst ps (fun st : state => (~ ((1 <= (fst st x))%nat)) /\ ((fst st x) = (0%nat)))) >= 1/(INR (S (n - i))))%R) 
-              (nth i
-                (to_list
-                  (antecedent_geq (G_vector n) (P_vector n n) (Leq (Const 1) (Var x)) (fun st : state => (fst st x) = 0)
-                      (T_vector n))) (fun ps => True)).
-Proof. intros. intro. induction i.
-          + unfold antecedent_geq. unfold gamma_geq. unfold inner_conj_geq. unfold gamma_compare. unfold zip_gamma_geq. unfold zip_gamma_compare. unfold gamma_geq.
-              unfold gamma_compare. repeat (
-    unfold CTermexp_of_nat;
-    unfold CTermexp_of_Texp;
-    unfold PTerm_of_R; unfold PTermexp_of_pterm; unfold Pteval; unfold CBoolexp_of_bexp; unfold Beval; unfold Teval
-    ). simpl. 
-        assert (T: forall (k : nat), k > 0 -> exists k1, k = (S k1)). 
-                - intro. destruct k. lia. intro. exists k. reflexivity.
-                - assert (exists k1 : nat, n = (S k1)). apply T. apply H. inversion H1. rewrite H2. simpl. replace (x0 =? (S x0)) with (Datatypes.false). replace (x0 =? (x0 + 1)) with (Datatypes.false).
-                  simpl. intro. split. simpl. replace (S (x0 + 1)) with (S (S x0)). easy.
-                  lia. easy. symmetry. apply Nat.eqb_neq. lia. symmetry. apply Nat.eqb_neq. lia.
-          + unfold antecedent_geq. unfold gamma_geq. unfold inner_conj_geq. unfold gamma_compare. unfold zip_gamma_geq. unfold zip_gamma_compare. unfold gamma_geq.
-              unfold gamma_compare. repeat (
-    unfold CTermexp_of_nat;
-    unfold CTermexp_of_Texp;
-    unfold PTerm_of_R; unfold PTermexp_of_pterm; unfold Pteval; unfold CBoolexp_of_bexp; unfold Beval; unfold Teval
-    ). simpl. unfold nth. unfold to_list. simpl. unfold Vector.hd. easy. unfold apply_func. simpl. easy.  intro.
-                  split. destruct H3. apply H3. easy. easy. split.
-                  easy.
-                  easy. *)
 
 
-(* Lemma helper5: forall (i n : nat), (i < n) -> 
-hoare_triple (nth i (to_list (Vector.map int_true_eq_one (G_vector n))) (fun ps => True)) 
-(CSeq (uniform_xplus1) <{if val = 0 then x := 0 else x := (x + 1) end}>)
-(nth i
-     (to_list
-        (antecedent_geq (G_vector n) (P_vector n n) (Leq (Const 1) (Var x)) (fun st : state => (fst st x) = 0)
-           (T_vector n))) (fun ps => True)).
-Proof. induction n.
-        + intros. assert (~ (i < 0)). lia. contradiction.
-        + intro. destruct (Nat.eq_dec i 0).
-          * rewrite e. unfold antecedent_geq. unfold gamma_geq. unfold inner_conj_geq. unfold gamma_compare. unfold zip_gamma_geq. unfold zip_gamma_compare. unfold gamma_geq.
-              unfold gamma_compare. repeat (
-    unfold CTermexp_of_nat;
-    unfold CTermexp_of_Texp;
-    unfold PTerm_of_R; unfold PTermexp_of_pterm; unfold Pteval; unfold CBoolexp_of_bexp; unfold Beval; unfold Teval
-    ). simpl. 
-    unfold antecedent_geq in IHn. unfold gamma_geq in IHn. unfold inner_conj_geq in IHn. unfold gamma_compare in IHn. unfold zip_gamma_geq in IHn. unfold zip_gamma_compare in IHn. unfold gamma_geq in IHn.
-              unfold gamma_compare in IHn. repeat (
-    unfold CTermexp_of_nat in IHn;
-    unfold CTermexp_of_Texp in IHn;
-    unfold PTerm_of_R in IHn; unfold PTermexp_of_pterm in IHn; unfold Pteval in IHn; unfold CBoolexp_of_bexp in IHn; unfold Beval in IHn; unfold Teval in IHn
-    ). simpl in IHn. unfold apply_func. apply HAnd. apply HAnd. replace (n =? (n+1)) with (Datatypes.false). simpl. admit.
-        admit. replace (n =? (n+1)) with (Datatypes.false). simpl. unfold PAssertion_conj. unfold Vector.hd. unfold zip. unfold nth. simpl.
-             unfold PAssertion_conj. simpl. lia.
-          * intro. intro. rewrite <- helper0. rewrite <- helper0 in IHn. unfold to_list. simpl. 
-            assert (T: forall (k : nat), k <>0 -> exists k1, k = (S k1)).
-              - intro. destruct k. contradiction. intro. exists k. reflexivity.
-              - assert (exists k1 : nat, i = (S k1)). apply T. apply n0. inversion H0. rewrite H1. apply IHn. lia.
-Qed. *)
 
-
-Theorem Espline_term_int : forall (n : nat) (b : bexp) (tempA : Assertion), (n >0) -> (b = (Leq (Const 1) (Var x))) -> Assertion_equiv tempA (CBoolexp_of_bexp ((Eq (Const 1) (Var x)))) -> 
-        hoare_triple ({{(prob (b /\ tempA)) >= y1 /\ (prob (b /\ tempA)) = (prob true)}}) 
-      (While b (CSeq (uniform_xplus1) (<{if val = 0 then x := 0 else x := x + 1 end}>)) )
+Theorem Espline_term_int : forall (n : nat) (btemp : bexp) (tempA : Assertion), (n >0) -> (btemp = (Leq (Const 1) (Var x))) -> Assertion_equiv tempA (CBoolexp_of_bexp ((Eq (Const 1) (Var x)))) -> 
+        hoare_triple ({{(prob (btemp /\ tempA)) >= y1 /\ (prob (btemp /\ tempA)) = (prob true)}}) 
+      (While btemp (CSeq (uniform_xplus1) (<{if val = 0 then x := 0 else x := x + 1 end}>)) )
  (fun ps : Pstate => ((1 - (1/(INR n + 1)))*(snd ps y1) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R).
 Proof. intros. eapply HWhileLB2 with (m := n) (G := G_vector n) (T := T_vector n) (P := P_vector n n) (X := X_vector n) (i := n - 1).
         + rewrite H0. apply helper1.
@@ -639,7 +568,7 @@ Proof. intros. eapply HWhileLB2 with (m := n) (G := G_vector n) (T := T_vector n
        PAssertion) st)))) (eta3 := (fun ps : Pstate => ((1/((INR (n - i)) + 1))%R = fst ps (fun st : state => ((fst st) x) = 0%nat))%R)). 
               -- intro. unfold int_true_eq_one.  uncoerce_basic. unfold CBoolexp_of_bexp. unfold Beval. unfold Teval. 
                   replace (fst ps (fun st2 : state => (fst st2 x) = (n - i))) with (fst ps (fun st : state => (n - i) = (fst st x))). easy. apply equivalence. intro. lia. 
-              -- intro. intro. replace (fst ps (fun st : state => (~ (CBoolexp_of_bexp b2 st)) /\ ((fst st x) = (0%nat)))) with (fst ps (fun st : state => (fst st x) = 0)).
+              -- intro. intro. replace (fst ps (fun st : state => (~ (CBoolexp_of_bexp btemp st)) /\ ((fst st x) = (0%nat)))) with (fst ps (fun st : state => (fst st x) = 0)).
                  rewrite <- H3. lra. apply equivalence. intro. unfold CBoolexp_of_bexp. rewrite H0. unfold Beval. unfold Teval. lia.
               -- apply body0 with (k := n - i). 
             - easy. 

@@ -6,15 +6,12 @@ From Coq Require Import Arith.
 From Coq Require Import EqNat.
 From Coq Require Import PeanoNat. Import Nat.
 From Coq Require Import Lia.
-(*From PLF Require Export Imp.*)
-(*From PLF Require Export Hoare.*)
 From Coq Require Import Reals.
 From Coq Require Import Logic.FunctionalExtensionality.
 From Coq Require Import Logic.PropExtensionality.
 From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
-(* From Coq Require Import List. *)
 Import Vector.VectorNotations.
 From Coq Require Import Vector.
 From Coq Require Import Notations.
@@ -876,11 +873,5 @@ Proof. intros.
                 * intro. uncoerce_basic. easy.
                 * apply Rwalk_term_y. easy.
 Qed.
-
-(* Theorem Rwalk_term : forall (n : nat), (n > 0) -> hoare_triple ({{(prob true) = 1}}) (RandomWalk) (fun ps : Pstate => ((1 - (1/(INR n + 1))) <= fst ps (fun st : state => (fst st x = 0)%nat) )%R).
-Proof. intros. apply HConseqLeft with (eta2 := ({{(prob (x = 1)) >= 1 /\ (prob (x = 1)) = (prob true)}})).
-          * intro. uncoerce_basic. lra.
-          * apply Espline_term_elim_y. easy.
-Qed. *) 
 
 End RandomWalk.

@@ -1,4 +1,3 @@
-Print Libraries.
 From PHL Require Import Maps.
 From PHL Require Import PHLTest.
 From Coq Require Import Bool.
@@ -6,15 +5,12 @@ From Coq Require Import Arith.
 From Coq Require Import EqNat.
 From Coq Require Import PeanoNat. Import Nat.
 From Coq Require Import Lia.
-(*From PLF Require Export Imp.*)
-(*From PLF Require Export Hoare.*)
 From Coq Require Import Reals.
 From Coq Require Import Logic.FunctionalExtensionality.
 From Coq Require Import Logic.PropExtensionality.
 From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
-(* From Coq Require Import List. *)
 Import Vector.VectorNotations.
 From Coq Require Import Vector.
 Import PHL.
@@ -99,10 +95,10 @@ Theorem Herman_termination_y_LB: {{((prob (((a1 /\ a2 /\ a3) \/ (~a1 /\ ~a2 /\ ~
     a3 toss 0.5 end
 }> {{(prob (true)) >= (1*y)}}.
 Proof.
-       assert (T: forall (b : bexp) (tempA : Assertion), (b = <{(a1 /\ (a2 /\ a3)) \/ (~a1 /\ (~a2 /\ ~a3))}>) -> Assertion_equiv tempA (CBoolexp_of_bexp <{(a1 /\ (a2 /\ a3)) }>) 
-          -> {{ ((prob (b /\ tempA)) >= y) /\ ((prob (b /\ tempA)) = (prob true)) }}
+       assert (T: forall (btemp : bexp) (tempA : Assertion), (btemp = <{(a1 /\ (a2 /\ a3)) \/ (~a1 /\ (~a2 /\ ~a3))}>) -> Assertion_equiv tempA (CBoolexp_of_bexp <{(a1 /\ (a2 /\ a3)) }>) 
+          -> {{ ((prob (btemp /\ tempA)) >= y) /\ ((prob (btemp /\ tempA)) = (prob true)) }}
 <{ 
-  while (b) do 
+  while (btemp) do 
     a1 toss 0.5; 
     a2 toss 0.5;
     a3 toss 0.5 end
@@ -110,7 +106,7 @@ Proof.
     * intros. eapply HWhileLB.
       - assert (forall i : nat,
 (i < 2) ->
-(forall st : state, ((List.nth i (to_list [CBoolexp_of_bexp <{a1 /\ (a2 /\ a3) }>; CBoolexp_of_bexp <{~ a1 /\ (~a2 /\ ~a3) }>]) (fun _ : state => True)) st) -> (Beval b2 st))).
+(forall st : state, ((List.nth i (to_list [CBoolexp_of_bexp <{a1 /\ (a2 /\ a3) }>; CBoolexp_of_bexp <{~ a1 /\ (~a2 /\ ~a3) }>]) (fun _ : state => True)) st) -> (Beval btemp st))).
         --  intros i T1 st. destruct i.
             ** simpl. rewrite H. unfold Beval. tauto.
             ** destruct i.

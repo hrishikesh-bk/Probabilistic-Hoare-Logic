@@ -1,4 +1,3 @@
-Print Libraries.
 From PHL Require Import Maps.
 From PHL Require Import PHLTest.
 From Coq Require Import Bool.
@@ -6,15 +5,12 @@ From Coq Require Import Arith.
 From Coq Require Import EqNat.
 From Coq Require Import PeanoNat. Import Nat.
 From Coq Require Import Lia.
-(*From PLF Require Export Imp.*)
-(*From PLF Require Export Hoare.*)
 From Coq Require Import Reals.
 From Coq Require Import Logic.FunctionalExtensionality.
 From Coq Require Import Logic.PropExtensionality.
 From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
-(* From Coq Require Import List. *)
 Import Vector.VectorNotations.
 From Coq Require Import Vector.
 From Coq Require Import Notations.
@@ -433,6 +429,7 @@ Proof.
   lra.
 Qed.
 
+(* hoare_triple (prob(val = 0) = 1) uniform_exp k (prob (v = k1)) = 1/2^k *)
 Theorem unif: forall (k k1 : nat), (k1 < (2 ^ k)) -> hoare_triple ({{(prob (val = 0)) = 1}}) (uniform_exp k) (post k k1).
 Proof. intro k. induction k.
     + intros. destruct k1.
@@ -497,6 +494,7 @@ Qed.
 
 Definition post1 (k k1 : nat) := fun ps: Pstate => (fst ps) (fun st : state => (fst st) val < k1) = ((INR k1) / (2 ^ k))%R.
 
+(* hoare_triple (prob (val = 0) = 1) uniform_exp k (prob (val < k1)) = k1/2^k *)
 Theorem unif_sum: forall (k k1 : nat), (k1 <= 2 ^ k) -> hoare_triple ({{(prob (val = 0)) = 1}}) (uniform_exp k) (post1 k k1).
 Proof. intros k k1. induction k1. intro. apply HConseqRight with (eta2 := post k 0).
       - unfold PAImplies. intro. unfold post1. unfold Z.of_nat. replace (fst ps (fun st : state => (fst st val) < 0)) with (fst ps {{false}}).
@@ -507,21 +505,23 @@ Proof. intros k k1. induction k1. intro. apply HConseqRight with (eta2 := post k
           replace (fst ps (fun st : state => (fst st val) < (S k1))) with (fst ps (fun st : state => (fst st val) < k1 \/ (fst st val) = k1)).
           rewrite <- fin_additivity. unfold twok in H0. 
           replace (fst ps (fun st : state => (fst st val) < k1)) with (((INR k1) / (2 ^ k))%R).
-          replace (fst ps (fun st : state => (fst st val) = k1)) with  ((1 / (2 ^ k))%R). unfold Rdiv. Search (?a*?c + ?b*?c)%R.
-          rewrite <- Rmult_plus_distr_r. Search (?a*?c = ?b*?c)%R. apply Rmult_eq_compat_r. Search "INR". rewrite <- INR_1. rewrite <- plus_INR.
+          replace (fst ps (fun st : state => (fst st val) = k1)) with  ((1 / (2 ^ k))%R). unfold Rdiv. 
+          rewrite <- Rmult_plus_distr_r. apply Rmult_eq_compat_r. rewrite <- INR_1. rewrite <- plus_INR.
           replace (k1 + 1)%nat with (S k1). reflexivity. lia. 
           symmetry. apply H0. symmetry. apply H0. 
           intro. lia. apply equivalence. unfold Assertion_equiv. intro. lia. 
         + eapply HAnd. apply IHk1. lia. apply unif. lia.
 Qed.
 
+(* hoare_triple ((prob(val = 0)) = 1) uniform_exp k (prob (val < 2^k) = 1) *)
 Theorem unif_full : forall (k : nat), hoare_triple ({{(prob (val = 0)) = 1}}) (uniform_exp k) (fun ps => fst ps (fun st => fst st val < 2^k) = 1%R).
 Proof. intro. apply HConseqRight with (eta2 := (post1 k (2^k))).
         + intro. unfold post1. replace (((INR (2 ^ k)) / (2 ^ k))%R) with (1%R). tauto. rewrite pow_INR.
-          replace (INR 2) with (2%R). Search "Rdiv". symmetry. apply Rdiv_diag. apply pow_nonzero. lra. easy.
+          replace (INR 2) with (2%R). symmetry. apply Rdiv_diag. apply pow_nonzero. lra. easy.
         + apply unif_sum. easy.
 Qed.
 
+(* hoare_triple ((prob(val = 0)) = 1 /\ (prob true) = 1) uniform_exp k (prob (val >= 2^k) = 1) *)
 Theorem unif_empty : forall (k : nat), hoare_triple ({{(prob (val = 0)) = 1 /\ (prob true) = 1 }}) (uniform_exp k) (fun ps : Pstate => fst ps (fun st => fst st val >= 2^k) = 0%R).
 Proof. intro. apply HConseqRight with (eta2 := (fun ps : Pstate => fst ps (fun st => fst st val < 2^k) = 1%R /\ fst ps {{true}} = 1%R)).
         + intro. replace (fst ps {{true}}) with ((fst ps (fun st => (fst st val) < (2 ^ k) \/ (fst st val) >= (2 ^ k)))).
@@ -536,11 +536,12 @@ Proof. intro. apply HConseqRight with (eta2 := (fun ps : Pstate => fst ps (fun s
             ** apply uniform_exp_true.
 Qed.
 
+(* hoare_triple ((prob(val = 0)) = 1 /\ (prob (true)) = 1) uniform_exp k (prob (val >= k1) = 1 - (k1 / 2^k) *)
 Theorem unif_ge: forall (k k1: nat), (k1 <= 2^k) -> hoare_triple ({{(prob (val = 0)) = 1 /\ (prob true) = 1}}) (uniform_exp k) (fun ps => fst ps (fun st => fst st val >= k1) = (1 - ((INR k1) / 2^k))%R).
 Proof. intros. apply HConseqRight with (eta2 := (fun ps : Pstate => (fst ps) (fun st => (fst st val) < k1) = ((INR k1) / (2 ^ k))%R /\ fst ps (fun st => fst st val < 2^k) = 1%R /\ fst ps (fun st => fst st val >= 2^k) = 0%R)).
           + intro. intro. replace (fun st : state => (fst st val) >= k1) with (fun st : state => ((fst st val) >= k1 /\ (fst st val) < 2^k) \/ ((fst st val) >= 2^k) ).
             * rewrite <- fin_additivity. replace (fst ps (fun st : state => ((fst st val) >= (2 ^ k))%nat)) with (0%R).
-              Search "plus_0". rewrite Rplus_0_r. replace (fst ps (fun st : state => ((fst st val) >= k1) /\ ((fst st val) < (2 ^ k)))) with (fst ps (fun st : state => ((fst st val) < (2 ^ k)) /\ ~((fst st val) < k1))).
+              rewrite Rplus_0_r. replace (fst ps (fun st : state => ((fst st val) >= k1) /\ ((fst st val) < (2 ^ k)))) with (fst ps (fun st : state => ((fst st val) < (2 ^ k)) /\ ~((fst st val) < k1))).
               -  rewrite measure_AnotB. replace (fst ps (fun st : state => ((fst st val) < (2 ^ k))%nat)) with (1%R).
                  replace (fst ps (fun st : state => (((fst st val) < (2 ^ k))%nat) /\ (((fst st val) < k1)%nat))) with ((INR k1) / (2 ^ k))%R.
                  reflexivity. symmetry. transitivity (fst ps (fun st : state => (fst st val) < k1)).
@@ -576,6 +577,7 @@ Qed.
 
 Definition post_body_t (k k1 : nat) : PAssertion := fun ps: Pstate => (fst ps (fun st : state => (((fst st) val) >= k)%nat) <=  (1 - ((INR k) / 2^k)))%R /\ ((fst ps (fun st : state => ~ (k <= ((fst st) val))%nat /\ True)) <= (INR k/ 2 ^ k))%R.
 
+(* hoare_triple ((prob(val >= k)) = 1 /\ (prob (val >= k) = prob true) body_unif_k k (prob (val >= k) <= 1 - (k / 2^k) /\ prob (val < k) <= k/2^k) *)
 Theorem body_unif_t_prop: forall (k k1 : nat), (k1 < k) -> hoare_triple ({{(prob (val >= k)) = 1 /\ (prob (val >= k)) = (prob true) }}) (body_unif_k k) (post_body_t k k1).
 Proof. intros. apply HAnd. 
         + apply HSeq with (eta2 := {{(prob (val = 0)) = 1 /\ (prob true) = 1}}).
@@ -590,8 +592,8 @@ Proof. intros. apply HAnd.
             ** intro. intro. apply Req_le. apply H0.
             ** apply unif_ge. assert (forall n : nat, n <= 2^n). induction n.
                 - lia.
-                - Search "Nat". destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
-                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). Search (?a*?b <= ?a*?c). apply mul_le_mono_l. apply IHn.
+                - destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
+                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). apply mul_le_mono_l. apply IHn.
                   simpl. lia.
                 - apply H0.
         + apply HSeq with (eta2 := {{(prob (val = 0)) = 1 /\ (prob true) = 1}}).
@@ -607,16 +609,17 @@ Proof. intros. apply HAnd.
             ** unfold post. unfold post_st. unfold twok. intro. intros. 
                right. unfold post1 in H0. transitivity (fst ps (fun st : state => (fst st val) < k)).
                 apply equivalence. unfold Assertion_equiv. intro. lia. easy. 
-            ** apply unif_sum. Search (?a < ?b)%nat. assert (forall n : nat, n <= 2^n). induction n.
+            ** apply unif_sum. assert (forall n : nat, n <= 2^n). induction n.
                 - lia.
-                - Search "Nat". destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
-                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). Search (?a*?b <= ?a*?c). apply mul_le_mono_l. apply IHn.
+                - destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
+                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). apply mul_le_mono_l. apply IHn.
                   simpl. lia.
                 - apply H0. 
 Qed.
 
 Definition post_body_LB_t (k k1 : nat): PAssertion := fun ps: Pstate => (fst ps (fun st : state => (((fst st) val) >= k)%nat) >=  (1 - ((INR k) / 2^k)))%R /\ (fst ps (fun st : state => ~ (k <= ((fst st) val))%nat /\ True) >= (INR k/ 2 ^ k))%R.
 
+(* hoare_triple ((prob(val >= k)) = 1 /\ (prob (val >= k) = prob true) body_unif_k k (prob (val >= k) >= 1 - (k / 2^k) /\ prob (val < k) >= k/2^k) *)
 Theorem body_unif_prop_LB_t : forall (k k1 : nat), (k1 < k) -> hoare_triple ({{(prob (val >= k)) = 1 /\ (prob (val >= k)) = (prob true) }}) (body_unif_k k) (post_body_LB_t k k1).
 Proof. intros. apply HAnd. 
         + apply HSeq with (eta2 := {{(prob (val = 0)) = 1 /\ (prob true) = 1}}).
@@ -631,8 +634,8 @@ Proof. intros. apply HAnd.
             ** intro. intro. apply Req_ge. apply H0.
             ** apply unif_ge. assert (forall n : nat, n <= 2^n). induction n.
                 - lia.
-                - Search "Nat". destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
-                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). Search (?a*?b <= ?a*?c). apply mul_le_mono_l. apply IHn.
+                - destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
+                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). apply mul_le_mono_l. apply IHn.
                   simpl. lia.
                 - apply H0.
         + apply HSeq with (eta2 := {{(prob (val = 0)) = 1 /\ (prob true) = 1}}).
@@ -648,10 +651,10 @@ Proof. intros. apply HAnd.
             ** intro. intros. 
                right. unfold post1 in H0. transitivity (fst ps (fun st : state => (fst st val) < k)).
                 apply equivalence. unfold Assertion_equiv. intro. lia. easy.  
-            ** apply unif_sum. Search (?a < ?b)%nat. assert (forall n : nat, n <= 2^n). induction n.
+            ** apply unif_sum. assert (forall n : nat, n <= 2^n). induction n.
                 - lia.
-                - Search "Nat". destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
-                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). Search (?a*?b <= ?a*?c). apply mul_le_mono_l. apply IHn.
+                - destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
+                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). apply mul_le_mono_l. apply IHn.
                   simpl. lia.
                 - apply H0. 
 Qed.
@@ -674,7 +677,7 @@ Proof. intros. eapply HWhileUB with (m := 1) (G := [(fun st1 => Beval b0 st1)]) 
             apply body_unif_t_prop with (k1 := k1). apply H1. apply functional_extensionality. intro. apply propositional_extensionality. tauto.
           * assert (~ (S i) < 1). lia. contradiction.
         + intros. destruct i. 
-          * unfold lin_ineq. simpl. rewrite Rplus_0_r. Search "minus". Search "Ropp". Search "Rplus_comm". rewrite Rplus_comm. rewrite Rmult_1_r. rewrite Rplus_minus_assoc. rewrite Rplus_minus_l. lra.
+          * unfold lin_ineq. simpl. rewrite Rplus_0_r. rewrite Rplus_comm. rewrite Rmult_1_r. rewrite Rplus_minus_assoc. rewrite Rplus_minus_l. lra.
           * assert (~ (S i) < 1). lia. contradiction.
         + assert (0 < 1). lia. exact H2.
         + intro. simpl. rewrite H. unfold Beval. unfold Teval. unfold Assertion_equiv in H0. unfold CBoolexp_of_bexp in H0.
@@ -710,7 +713,7 @@ Proof. intros. eapply HWhileLB with (m := 1) (G := [(fun st1 => Beval b0 st1)]) 
             apply body_unif_prop_LB_t with (k1 := k1). apply H1. apply functional_extensionality. intro. apply propositional_extensionality. tauto.
           * assert (~ (S i) < 1). lia. contradiction.
         + intros. destruct i. 
-          * unfold lin_ineq_lb. simpl. rewrite Rplus_0_r. Search "minus". Search "Ropp". rewrite Rmult_minus_distr_r. rewrite Rmult_1_l. rewrite <- Rplus_minus_swap. rewrite Rmult_1_r. rewrite Rplus_minus_r. lra. 
+          * unfold lin_ineq_lb. simpl. rewrite Rplus_0_r. rewrite Rmult_minus_distr_r. rewrite Rmult_1_l. rewrite <- Rplus_minus_swap. rewrite Rmult_1_r. rewrite Rplus_minus_r. lra. 
           * assert (~ (S i) < 1). lia. contradiction.
         + assert (0 < 1). lia. exact H2.
         + intro. simpl. rewrite H. unfold Beval. unfold Teval. unfold Assertion_equiv in H0. unfold CBoolexp_of_bexp in H0.
@@ -747,6 +750,7 @@ Proof. intros. apply HConseqLeft with (eta2 := (fun st : Pstate =>
                   reflexivity. easy. easy.
 Qed.
 
+(* hoare_triple ((prob(val = k)) = 1 /\ (prob (val = k) = prob true) uniform_k k (prob true = 1) *)
 Theorem uniform_t: forall (k k1 : nat), (k1 < k) -> hoare_triple ({{(prob  (k = val)) = 1 /\ (prob (k = val)) = (prob true)}}) (uniform_k k)  (fun ps : Pstate => ((1 = fst ps (fun st : state => True))%R)).
 Proof. intros. apply HConseqLeft with (eta2 := {{(prob (k <= val)) = 1 /\ (prob (k <= val)) = (prob true) }}).
         + intro. unfold Pteval. unfold CTermexp_of_Texp. unfold CTermexp_of_nat. unfold Teval. unfold PTerm_of_R. intro.
@@ -754,10 +758,10 @@ Proof. intros. apply HConseqLeft with (eta2 := {{(prob (k <= val)) = 1 /\ (prob 
           rewrite H1. split. 
           * apply Rle_antisym. 
             - rewrite <- H1. apply measure_inclusion. easy.
-            - destruct H0. rewrite <- H0. apply measure_inclusion. intros. Search "eq_le" in Nat. apply eq_le_incl. symmetry. easy. 
+            - destruct H0. rewrite <- H0. apply measure_inclusion. intros. apply eq_le_incl. symmetry. easy. 
           * apply Rle_antisym. 
             - rewrite <- H1. apply measure_inclusion. easy.
-            - destruct H0. rewrite <- H0. apply measure_inclusion. intros. Search "eq_le" in Nat. apply eq_le_incl. symmetry. easy.
+            - destruct H0. rewrite <- H0. apply measure_inclusion. intros. apply eq_le_incl. symmetry. easy.
        + apply HConseq with (eta2 := eta_update_y_p ({{(prob (k <= val)) = y1 /\ (prob (k <= val)) = (prob true) }}) y1 (1%R))
                             (eta3 := eta_update_y_p (fun ps : Pstate => ((1*(snd ps y1)) = fst ps (fun st : state => True))%R) y1 (1%R) ).
           * intro. unfold eta_update_y_p. unfold pstate_update. unfold Pteval. simpl. intro.
@@ -767,9 +771,6 @@ Proof. intros. apply HConseqLeft with (eta2 := {{(prob (k <= val)) = 1 /\ (prob 
              - intro. easy.
              - apply uniform_k_inter_t with (k1 := k1). apply H.
 Qed.
-
-
-
 
 
 Definition post_body (k k1 : nat): PAssertion := fun ps: Pstate => (fst ps (fun st : state => (((fst st) val) >= k)%nat) <=  (1 - ((INR k) / 2^k)))%R /\ (fst ps (fun st : state => ~ (k <= ((fst st) val))%nat /\ ((fst st) val) = k1) <= (1/ 2 ^ k))%R.
@@ -788,8 +789,8 @@ Proof. intros. apply HAnd.
             ** intro. intro. apply Req_le. apply H0.
             ** apply unif_ge. assert (forall n : nat, n <= 2^n). induction n.
                 - lia.
-                - Search "Nat". destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
-                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). Search (?a*?b <= ?a*?c). apply mul_le_mono_l. apply IHn.
+                - destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
+                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). apply mul_le_mono_l. apply IHn.
                   simpl. lia.
                 - apply H0.
         + apply HSeq with (eta2 := {{(prob (val = 0)) = 1 /\ (prob true) = 1}}).
@@ -805,10 +806,10 @@ Proof. intros. apply HAnd.
             ** unfold post. unfold post_st. unfold twok. intro. intros. 
                replace (fst ps (fun st : state => (~ ((k <= (fst st val))%nat)) /\ ((fst st val) = k1))) with (fst ps (fun st : state => (fst st val) = k1)).
                right. apply H0. apply equivalence. intro. split. intro. split. lia. apply H1. tauto.
-            ** apply unif. Search (?a < ?b)%nat. apply lt_le_trans with (m := k). easy. assert (forall n : nat, n <= 2^n). induction n.
+            ** apply unif. apply lt_le_trans with (m := k). easy. assert (forall n : nat, n <= 2^n). induction n.
                 - lia.
-                - Search "Nat". destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
-                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). Search (?a*?b <= ?a*?c). apply mul_le_mono_l. apply IHn.
+                - destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
+                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). apply mul_le_mono_l. apply IHn.
                   simpl. lia.
                 - apply H0. 
 Qed. 
@@ -829,8 +830,8 @@ Proof. intros. apply HAnd.
             ** intro. intro. apply Req_ge. apply H0.
             ** apply unif_ge. assert (forall n : nat, n <= 2^n). induction n.
                 - lia.
-                - Search "Nat". destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
-                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). Search (?a*?b <= ?a*?c). apply mul_le_mono_l. apply IHn.
+                - destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
+                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). apply mul_le_mono_l. apply IHn.
                   simpl. lia.
                 - apply H0.
         + apply HSeq with (eta2 := {{(prob (val = 0)) = 1 /\ (prob true) = 1}}).
@@ -846,10 +847,10 @@ Proof. intros. apply HAnd.
             ** unfold post. unfold post_st. unfold twok. intro. intros. 
                replace (fst ps (fun st : state => (~ ((k <= (fst st val))%nat)) /\ ((fst st val) = k1))) with (fst ps (fun st : state => (fst st val) = k1)).
                right. apply H0. apply equivalence. intro. split. intro. split. lia. apply H1. tauto.
-            ** apply unif. Search (?a < ?b)%nat. apply lt_le_trans with (m := k). easy. assert (forall n : nat, n <= 2^n). induction n.
+            ** apply unif. apply lt_le_trans with (m := k). easy. assert (forall n : nat, n <= 2^n). induction n.
                 - lia.
-                - Search "Nat". destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
-                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). Search (?a*?b <= ?a*?c). apply mul_le_mono_l. apply IHn.
+                - destruct n. simpl. lia. apply le_trans with (m := (2 * (S n))%nat). simpl. lia. 
+                  apply le_trans with (m := (2 * (2 ^ (S n)))%nat). apply mul_le_mono_l. apply IHn.
                   simpl. lia.
                 - apply H0. 
 Qed.
@@ -874,9 +875,9 @@ Proof. intros. eapply HWhileUB with (m := 1) (G := [(fun st1 => Beval b0 st1)]) 
             apply body_unif_prop. apply H1. apply functional_extensionality. intro. apply propositional_extensionality. tauto.
           * assert (~ (S i) < 1). lia. contradiction.
         + intros. destruct i. 
-          * unfold lin_ineq. simpl. rewrite Rplus_0_r. Search "minus". Search "Ropp". rewrite Rmult_minus_distr_r. rewrite Rmult_1_l. rewrite -> Rdiv_1_l. replace ((INR k) / (2 ^ k))%R with ((INR k)*  (/ (2 ^ k)))%R.
+          * unfold lin_ineq. simpl. rewrite Rplus_0_r. rewrite Rmult_minus_distr_r. rewrite Rmult_1_l. rewrite -> Rdiv_1_l. replace ((INR k) / (2 ^ k))%R with ((INR k)*  (/ (2 ^ k)))%R.
             rewrite Rmult_inv_r_id_m. rewrite Rdiv_1_l. rewrite Rplus_comm. rewrite Rplus_minus. apply Rle_refl. 
-            Search INR. rewrite <- INR_0. Search INR. apply not_INR. Search (?q <> 0). apply neq_0_lt_0. Search (0 < ?a) in Nat. apply lt_lt_0 with (n := k1). apply H1. rewrite Rdiv_def. reflexivity.
+            rewrite <- INR_0. apply not_INR. apply neq_0_lt_0. apply lt_lt_0 with (n := k1). apply H1. rewrite Rdiv_def. reflexivity.
           * assert (~ (S i) < 1). lia. contradiction.
         + assert (0 < 1). lia. exact H2.
         + intro. simpl. rewrite H. unfold Beval. unfold Teval. unfold Assertion_equiv in H0. unfold CBoolexp_of_bexp in H0.
@@ -895,7 +896,7 @@ Proof. intros. eapply HWhileLB with (m := 1) (G := [(fun st1 => Beval b0 st1)]) 
           *  assert (~ (j < 0)). lia. contradiction.
           * assert (~ (S i) < 1). lia. contradiction.
         + intros. destruct i.
-          * simpl. left. apply Rdiv_pos_pos. lra. Search "pow_nonzero". 
+          * simpl. left. apply Rdiv_pos_pos. lra. 
             assert (forall (n : nat), (2^n > 0)%R). induction n. simpl. lra. simpl. rewrite <- Rmult_0_r with (r := 2%R). apply Rmult_lt_compat_l.
             lra. apply IHn. apply H3.
           * assert (~ (S i) < 1). lia. contradiction.
@@ -914,9 +915,9 @@ Proof. intros. eapply HWhileLB with (m := 1) (G := [(fun st1 => Beval b0 st1)]) 
             apply body_unif_prop_LB. apply H1. apply functional_extensionality. intro. apply propositional_extensionality. tauto.
           * assert (~ (S i) < 1). lia. contradiction.
         + intros. destruct i. 
-          * unfold lin_ineq_lb. simpl. rewrite Rplus_0_r. Search "minus". Search "Ropp". rewrite Rmult_minus_distr_r. rewrite Rmult_1_l. rewrite -> Rdiv_1_l. replace ((INR k) / (2 ^ k))%R with ((INR k)*  (/ (2 ^ k)))%R.
+          * unfold lin_ineq_lb. simpl. rewrite Rplus_0_r. rewrite Rmult_minus_distr_r. rewrite Rmult_1_l. rewrite -> Rdiv_1_l. replace ((INR k) / (2 ^ k))%R with ((INR k)*  (/ (2 ^ k)))%R.
             rewrite Rmult_inv_r_id_m. rewrite Rdiv_1_l. rewrite Rplus_comm. rewrite Rplus_minus. apply Rle_refl. 
-            Search INR. rewrite <- INR_0. Search INR. apply not_INR. Search (?q <> 0). apply neq_0_lt_0. apply lt_lt_0 with (n := k1). apply H1. rewrite Rdiv_def. reflexivity.
+            rewrite <- INR_0. apply not_INR. apply neq_0_lt_0. apply lt_lt_0 with (n := k1). apply H1. rewrite Rdiv_def. reflexivity.
           * assert (~ (S i) < 1). lia. contradiction.
         + assert (0 < 1). lia. exact H2.
         + intro. simpl. rewrite H. unfold Beval. unfold Teval. unfold Assertion_equiv in H0. unfold CBoolexp_of_bexp in H0.
@@ -960,10 +961,10 @@ Proof. intros. apply HConseqLeft with (eta2 := {{(prob (k <= val)) = 1 /\ (prob 
           rewrite H1. split. 
           * apply Rle_antisym. 
             - rewrite <- H1. apply measure_inclusion. easy.
-            - destruct H0. rewrite <- H0. apply measure_inclusion. intros. Search "eq_le" in Nat. apply eq_le_incl. symmetry. easy. 
+            - destruct H0. rewrite <- H0. apply measure_inclusion. intros. apply eq_le_incl. symmetry. easy. 
           * apply Rle_antisym. 
             - rewrite <- H1. apply measure_inclusion. easy.
-            - destruct H0. rewrite <- H0. apply measure_inclusion. intros. Search "eq_le" in Nat. apply eq_le_incl. symmetry. easy.
+            - destruct H0. rewrite <- H0. apply measure_inclusion. intros. apply eq_le_incl. symmetry. easy.
        + apply HConseq with (eta2 := eta_update_y_p ({{(prob (k <= val)) = y1 /\ (prob (k <= val)) = (prob true) }}) y1 (1%R))
                             (eta3 := eta_update_y_p (fun ps : Pstate => (((1/INR k)*(snd ps y1)) = fst ps (fun st : state => ((fst st) val) = k1))%R) y1 (1%R) ).
           * intro. unfold eta_update_y_p. unfold pstate_update. unfold Pteval. simpl. intro.
@@ -974,5 +975,5 @@ Proof. intros. apply HConseqLeft with (eta2 := {{(prob (k <= val)) = 1 /\ (prob 
              - apply uniform_k_inter. apply H.
 Qed.
 
-Theorem 
+
       

@@ -4,15 +4,12 @@ From Coq Require Import Arith.
 From Coq Require Import EqNat.
 From Coq Require Import PeanoNat. Import Nat.
 From Coq Require Import Lia.
-(*From PLF Require Export Imp.*)
-(*From PLF Require Export Hoare.*)
 From Coq Require Import Reals.
 From Coq Require Import Logic.FunctionalExtensionality.
 From Coq Require Import Logic.PropExtensionality.
 From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
-(* From Coq Require Import List. *)
 Import Vector.VectorNotations.
 From Coq Require Import Vector.
 Require Import Classical.
@@ -34,6 +31,8 @@ Definition Rejection_sampling : Cmd :=
     b1 toss 0.5 end
 
 }>.
+
+Definition one_third : R := 1/3.
 
 
 Theorem Rsampling_body : hoare_triple ({{ ((prob (b0 /\ b1)) = 1) /\ (prob (b0 /\ b1)) = (prob true)}})
