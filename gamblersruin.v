@@ -20,6 +20,8 @@ From Coq Require Import Vector.
 Import PHL.
 
 
+Definition b:string := "b". 
+
 
 Definition GamblersRuin_Body (x0: string) : Cmd :=
 <{
@@ -256,7 +258,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
     apply measure_P_eq_true. easy. apply fin_additivity. easy. apply functional_extensionality. intros. apply propositional_extensionality.
     split. intros. destruct H1. easy. easy. intros. destruct (Nat.eq_dec n (fst x1 x0)) as [Heq | Hneq]. left. easy. right. easy.
     apply functional_extensionality. intros. apply propositional_extensionality. easy. simpl. split. easy.
-    unfold Measure_cond_B. replace (fun st : state => snd st b /\ Beval (BVar b) st) with (fun st : state => snd st b). easy.
+    unfold Measure_cond_B. uncoerce_basic. replace (fun st : state => snd st b /\ snd st b) with (fun st : state => snd st b). easy.
     apply functional_extensionality. intros. apply propositional_extensionality. easy.
     unfold PAcondB. unfold Measure_cond_B. simpl.
     replace (fun st : state => True /\ ~ snd st b) with (fun st : state => ~ snd st b). split. apply Rle_antisym.
@@ -356,7 +358,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
     apply functional_extensionality. intros. apply propositional_extensionality. easy. simpl. split. unfold Measure_cond_B. 
     destruct H0. replace (fst ps (fun st : state => n = fst st x0 /\ Beval b st)) with (fst ps (fun st : state =>  Beval b st)).
     easy. apply AddTrue. easy.
-    unfold Measure_cond_B. replace (fun st : state => snd st b /\ Beval (BVar b) st) with (fun st : state => snd st b). easy.
+    unfold Measure_cond_B. uncoerce_basic. replace (fun st : state => snd st b /\ snd st b) with (fun st : state => snd st b). easy.
     apply functional_extensionality. intros. apply propositional_extensionality. easy.
     unfold PAcondB. unfold Measure_cond_B. simpl.
     replace (fun st : state => True /\ ~ snd st b) with (fun st : state => ~ snd st b). split. apply Rle_antisym.
@@ -463,8 +465,8 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
       apply HAnd. 
         -------- apply HConseqLeft with (eta2 := (psfBpsf ({{(prob true) = onethird  /\  y3 = onethird}}) ({{(prob true) = twothird /\ y1 = twothird}}) (<{b}>))).
             --------- unfold PAImplies. unfold ifcase2. unfold psfBpsf. unfold PAcondB. unfold Measure_cond_B. uncoerce_basic. intros. 
-                      replace (fun st : state => True /\ snd st b) with (fun st : state =>  snd st b).
-                      replace (fun st : state => True /\ ~ snd st b) with (fun st : state => ~ snd st b). 
+                      replace (fun st : state => True /\ snd st b) with (CBoolexp_of_bexp (BVar b)).
+                      replace (fun st : state => True /\ ~ snd st b) with (fun st : state => ~ snd st b).
                       lra. 
                       apply functional_extensionality. intros. apply propositional_extensionality. easy.
                       apply functional_extensionality. intros. apply propositional_extensionality. easy.
