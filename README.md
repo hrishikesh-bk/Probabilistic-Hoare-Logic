@@ -1,6 +1,6 @@
 # Probabilistic-Hoare-Logic
 
-A formalization of logic TPHL from research paper 'A Complete Truth-functional Probabilistic Hoare Logic' submitted to POPL26, along with proofs of example propbabilistic programs as discussed in the paper.
+A formalization of logic TPHL from research paper 'A Complete Truth-functional Probabilistic Hoare Logic', along with proofs of example propbabilistic programs as discussed in the paper.
 
 The formalization is implemented in Rocq Theorem prover. The code was tested on Rocq-version 8.19.2. 
 
