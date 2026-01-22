@@ -18,6 +18,8 @@ Require Import Classical.
 
 Module PHL.
 
+(* Changes : Mod; Uniform Dice Roll *)
+
 (* Defining terms over nat
  *)
 Inductive Term: Type :=
@@ -25,7 +27,9 @@ Inductive Term: Type :=
   | Var (x : string)
   | sum (t1 : Term) (t2 : Term)
   | sub (t1 : Term) (t2 : Term)
-  | mult (t1 : Term) (t2 : Term).
+  | mult (t1 : Term) (t2 : Term)
+(* Mod *)
+  | modulo (t1 :Term) (t2 : Term).
 
 (* Defining boolean expressions
  *)
@@ -54,6 +58,7 @@ Fixpoint Teval (t : Term) (s : state) : nat :=
     | sum t1 t2 => (Teval t1 s) + (Teval t2 s)
     | sub t1 t2 => (Teval t1 s) - (Teval t2 s)
     | mult t1 t2 => (Teval t1 s) * (Teval t2 s)
+    | modulo t1 t2 => (Teval t1 s) mod (Teval t2 s)
 end.
 
 (* Evaluating a bexp in a state
@@ -90,6 +95,8 @@ Notation "x" := x (in custom com at level 0, x constr at level 0) : com_scope.
 Notation "x + y"   := (sum x y) (in custom com at level 50, left associativity): com_scope.
 Notation "x - y"   := (sub x y) (in custom com at level 50, left associativity): com_scope.
 Notation "x * y"   := (mult x y) (in custom com at level 40, left associativity): com_scope.
+(* Mod *)
+Notation " x 'mod' y" := (modulo x y) (in custom com at level 40, left associativity): com_scope.
 
 (* bexps - built using term comparisons and boolean operators *)
 Coercion BConst : bool >-> bexp.
@@ -157,6 +164,8 @@ Notation "~ P" := (fun st => ~ ((P:Assertion) st)) (in custom assn at level 75, 
 Notation "a + b" := (fun st => ((a:CTermexp) st + (b:CTermexp) st)%nat) (in custom assn at level 50, left associativity) : passertion_scope.
 Notation "a - b" := (fun st => ((a:CTermexp) st - (b:CTermexp) st)%nat) (in custom assn at level 50, left associativity) : passertion_scope.
 Notation "a * b" := (fun st => ((a:CTermexp) st * (b:CTermexp) st)%nat) (in custom assn at level 50, left associativity) : passertion_scope.
+(* Mod *)
+Notation "a 'mod' b" := (fun st => ((a:CTermexp) st mod (b:CTermexp) st)%nat) (in custom assn at level 50, left associativity) : passertion_scope.
 Notation "a <= b" := (fun st => ((a:CTermexp) st <= (b:CTermexp) st)%nat) (in custom assn at level 50, left associativity) : passertion_scope. 
 Notation "a >= b" := (fun st => ((b:CTermexp) st <= (a:CTermexp) st)%nat) (in custom assn at level 50, left associativity) : passertion_scope. 
 Notation "a = b" := (fun st => ((b:CTermexp) st = (a:CTermexp) st)%nat) (in custom assn at level 50, left associativity) : passertion_scope. 
@@ -492,6 +501,9 @@ Inductive Cmd : Type :=
   | TAsgn (x : string) (e : Term)
   | BAsgn (x : string) (e : bexp)
   | BToss (x : string) (r : R)
+  (* Uniform Dice Roll Command *)
+  | KRoll (x : string) (k : nat)
+  (* End of Dice Roll Command *)
   | CSeq (c1 : Cmd) (c2 : Cmd)
   | IfThen (g : bexp) (c1 : Cmd) (c2 : Cmd)
   | While (g : bexp) (c1 : Cmd).
@@ -510,6 +522,14 @@ Notation " x 'toss' r " :=
           (BToss x r)
               (in custom com at level 0, x constr at level 0,
              r constr at level 0, no associativity) : com_scope.
+
+(* Uniform Dice Roll Notation *)
+Notation " x 'roll' k " :=
+          (KRoll x k)
+              (in custom com at level 0, x constr at level 0,
+             k constr at level 0, no associativity) : com_scope.
+  (* End of Dice Roll Notation *)
+
 Notation "x ; y" :=
          (CSeq x y)
            (in custom com at level 90,
@@ -715,6 +735,35 @@ Fixpoint vec_to_func {n: nat} (def: Prop) (vec: Vector.t Prop n) : Type :=
 end.
 
 
+
+(* Uniform Dice Roll Rule Helpers   *)
+
+Fixpoint sum_R (f : nat -> R) (k : nat) : R :=
+  match k with
+  | 0 => 0
+  | S n => f n + sum_R f n
+  end.
+
+
+Definition measure_sub_k (x: string) (k: nat) (P : Assertion) : Assertion :=
+ fun st => ( P ((x !-> (Teval (Const k) st); (fst st)),(snd st))).
+
+Fixpoint measure_sub_kroll_P (x: string) (k : nat) (mu : Measure) (P : Assertion) : R :=
+match k with
+| 0 => (mu (measure_sub_k x k P))
+| S n =>  (measure_sub_kroll_P x n mu P) + (mu (measure_sub_k x k P))
+end.
+
+
+Definition measure_sub_kroll (x: string) (k : nat) (mu : Measure) : Measure :=
+( fun P => ((1/(INR (k + 1))) * (measure_sub_kroll_P  x k mu P))%R). (* 0 to K *)
+
+Definition kroll_pt (x : string) (k : nat) (eta : PAssertion) : PAssertion :=
+  fun ps =>
+    (eta (measure_sub_kroll x k (fst ps), snd ps)).
+
+(* End of Dice Roll Helpers*)
+
 (* Hoare triples
  *)
 Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
@@ -726,6 +775,10 @@ Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
     forall (eta: PAssertion) (x : string) (b : bexp), hoare_triple (basgn_pt x b eta) (BAsgn x b) eta
   | HBToss :
     forall (eta: PAssertion) (x : string) (r : R), hoare_triple (btoss_pt x r eta) (BToss x r) eta
+  (* Dice Roll Rule *)
+  | HKRoll : 
+      forall (eta: PAssertion) (x : string) (k : nat), hoare_triple (kroll_pt x k eta) (KRoll x k) eta
+  (* End of Dice Roll Rule *)
   | HConseq : 
     forall (eta1 : PAssertion) (eta2 : PAssertion) (eta3 : PAssertion) (eta4 : PAssertion) (c : Cmd), 
       PAImplies eta1 eta2 -> PAImplies eta3 eta4 -> hoare_triple eta2 c eta3 -> hoare_triple eta1 c eta4
