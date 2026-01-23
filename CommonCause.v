@@ -19,6 +19,8 @@ Import Vector.VectorNotations.
 From Coq Require Import Vector.
 Import PHL.
 
+Module CommonCause.
+
 
 Definition CommonCause (x y z a b: string): Cmd:=
 <{
@@ -324,3 +326,5 @@ eapply HConseqLeft with (eta2 :=
    = ((prob ((a <-> k1) /\ (z <-> k3)))* (prob ((b <-> k2) /\ (z <-> k3)))) }})).
    easy. apply HBAsgn.
 Qed.
+
+End CommonCause.
