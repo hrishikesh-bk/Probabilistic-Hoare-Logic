@@ -20,6 +20,8 @@ From Coq Require Import Vector.
 From Coq Require Import List String.
 Import PHL.
 
+Module MPC.
+
 
 Definition test (x : string): Cmd:=
 (KRoll x 2).
@@ -491,4 +493,4 @@ Qed.
 
 
 
-
+End MPC.
