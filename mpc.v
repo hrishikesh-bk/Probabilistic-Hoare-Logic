@@ -22,52 +22,10 @@ Import PHL.
 
 Module MPC.
 
-
-Definition test (x : string): Cmd:=
-(KRoll x 2).
-
-
 Definition r1:string := "r1". 
 Definition r2:string := "r2".
 Definition r3:string := "r3".
 Definition x1:string := "x1".
-
-
-
-Theorem DieTest: forall (p k: nat) (pr : R), (p > 0) -> (k >= 0) -> (k <= p) -> (pr = (INR p)) -> {{(prob true) = 1}}
-<{ (r1 roll p) }>
-{{ (prob (r1 = k))*(pr + 1) = 1 }}.
-Proof.
-intros. uncoerce_basic.
-eapply HConseqLeft. Focus 2. apply HKRoll.
-unfold PAImplies. unfold kroll_pt.  uncoerce_basic. simpl. intros.
-assert (forall (l:nat), (p > 0) -> (l >= 0) -> (l <= p) -> (l < k) -> 
-              ((measure_sub_kroll_P r1 l (fst ps) (fun st : state => k = fst st r1) = 0)%R)).
-- induct l. intros. unfold measure_sub_kroll_P. unfold measure_sub_k. unfold t_update. uncoerce_basic.
-  replace (k = 0) with False. pose proof measure_true_dest (fst ps) {{true}}. simpl in H8. 
-  replace False with (not True). lra. apply propositional_extensionality. easy. apply propositional_extensionality.
-  split. intros. contradiction. lia. intros. simpl. assert (n < k) by lia. assert (n <= p) by lia.
-  assert (n >= 0) by apply Nat.le_0_l. pose proof H4 H5 H11 H10 H9. rewrite H12.
-  unfold measure_sub_k. unfold t_update. uncoerce_basic. replace (k = S n) with (~True).
-  pose proof measure_true_dest (fst ps) {{true}}. lra. apply propositional_extensionality. lia.
-
-- assert (forall (l:nat), (p > 0) -> (l >= 0) -> (l <= p) -> (l >= k) -> 
-              ((measure_sub_kroll_P r1 l (fst ps) (fun st : state => k = fst st r1) = 1)%R)).
-induct l.
- intros. simpl. unfold measure_sub_k. unfold t_update. uncoerce_basic. replace (k = 0) with True.
-  easy. apply propositional_extensionality. lia.
- intros. assert (n >= 0) by apply Nat.le_0_l. assert (n <= p) by lia. destruct (lt_dec n k) as [Hnk | Hnltk].
-   * pose proof  (H4 n). pose proof H12 H6 H10 H11 Hnk. simpl. rewrite H13. unfold measure_sub_k. unfold t_update.
-       uncoerce_basic. replace (k = S n) with True. lra. apply propositional_extensionality. lia.
-   * assert (n >= k) by lia. pose proof H5 H6 H10 H11 H12. simpl. rewrite H13. unfold measure_sub_k.
-      unfold t_update. uncoerce_basic. replace (k = S n) with False by (apply propositional_extensionality; lia).
-      pose proof (measure_false_is_zero (fst ps)). rewrite H14. lra.
-* pose proof (H5 p). assert (p >= 0) by apply Nat.le_0_l. assert (p <= p) by lia. assert (p >= k) by lia.
-  pose proof H6 H H7 H8 H9. unfold measure_sub_kroll. rewrite H10. rewrite H2. rewrite plus_INR. rewrite INR_1.
-  field_simplify. easy. assert (0 < p) by easy. pose proof lt_0_INR p H11. lra.
-Qed.
-
-
 Definition r11:string := "r11". 
 Definition r12:string := "r12".
 Definition r13:string := "r13".
