@@ -8,9 +8,8 @@ File PHLTest contains the formalisation of TPHL along with small illustrative ex
 To run the code, first compile PHLTest.v followed by Uniform.v (EscapingSpline.v and RandomWalk.v depend on Uniform.v). 
 Now you can step through any of the files. In our test, all files were proved completely.
 
-To run the files:
-coq_makefile -f _CoqProject *.v -o Makefile 
-
+To run the files:  
+coq_makefile -f _CoqProject *.v -o Makefile  
 make
 
 To run one file:
