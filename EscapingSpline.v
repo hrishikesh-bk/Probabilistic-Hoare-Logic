@@ -12,6 +12,7 @@ From Coq Require Import Logic.PropExtensionality.
 From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
+From Stdlib Require Import Vectors.Vector.
 Import Vector.VectorNotations.
 From Coq Require Import Vector.
 From Coq Require Import Notations.
