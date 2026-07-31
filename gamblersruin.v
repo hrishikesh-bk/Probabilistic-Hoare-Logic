@@ -15,10 +15,13 @@ From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
 (* From Coq Require Import List. *)
+From Stdlib Require Import Vectors.Vector.
 Import Vector.VectorNotations.
 From Coq Require Import Vector.
 Import PHL.
 
+
+Definition neqnat (a b : nat) : Prop := a <> b.
 
 Definition b:string := "b". 
 
@@ -517,7 +520,7 @@ Qed.
 
 
 
-Theorem xgeq1_m:forall (x0: string) (n : nat), (n >= 1) -> (forall (m: nat), (neq m (n-1)) -> (neq m (n+1)) ->  hoare_triple ({{ ((prob (x0 = n)) = 1) /\ ((prob (x0 = n)) = (prob true)) }}) 
+Theorem xgeq1_m:forall (x0: string) (n : nat), (n >= 1) -> (forall (m: nat), (neqnat m (n-1)) -> (neqnat m (n+1)) ->  hoare_triple ({{ ((prob (x0 = n)) = 1) /\ ((prob (x0 = n)) = (prob true)) }}) 
                                                                             (GamblersRuin_Body x0) 
                                                                           ({{ ((prob (x0 = m)) = 0)}})).
 Proof.
@@ -529,14 +532,14 @@ assert (((fst ps (\{ (x0 = (n - 1)) \/ (x0 = (n + 1)) \})) = 1)%R).
     intros. lia.
  - uncoerce_basic H3.  destruct H2. destruct H4. rewrite <- H5 in H3.
     apply measure_inclusion_0 with (mu := fst ps) (P:= (fun st : state => m = fst st x0)) (Q:= (fun st : state =>
-        ~(n - 1 = fst st x0 \/ (n + 1)%nat = fst st x0))). intros. rewrite <- H6. unfold not. intros. destruct H7. unfold neq in H0. rewrite H7 in H0.
+        ~(n - 1 = fst st x0 \/ (n + 1)%nat = fst st x0))). intros. rewrite <- H6. unfold not. intros. destruct H7. unfold neqnat in H0. rewrite H7 in H0.
         contradiction. rewrite H7 in H1. contradiction. apply measure_P_eq_true with (P := (fun st : state =>
         n - 1 = fst st x0 \/ (n + 1)%nat = fst st x0)). easy.
  - uncoerce_basic. apply xgeq1. easy. 
 Qed.
 
 
-Theorem xgeq1_m_UB: forall (x0: string) (n m : nat), (n >= 1) -> (neq m (n-1)) -> (neq m (n+1)) ->  hoare_triple ({{ ((prob (x0 = n)) = 1) /\ ((prob (x0 = n)) = (prob true)) }}) 
+Theorem xgeq1_m_UB: forall (x0: string) (n m : nat), (n >= 1) -> (neqnat m (n-1)) -> (neqnat m (n+1)) ->  hoare_triple ({{ ((prob (x0 = n)) = 1) /\ ((prob (x0 = n)) = (prob true)) }}) 
                                                                             (GamblersRuin_Body x0) 
                                                                           ({{ ((prob (x0 = m)) <= 0)}}).
 Proof.
@@ -559,7 +562,7 @@ assert (((fst ps (\{ (x0 = (n - 1)) \/ (x0 = (n + 1)) \})) = 1)%R).
     intros. lia.
  - uncoerce_basic H2.  destruct H1. destruct H3.
     apply measure_inclusion_0 with (mu := fst ps) (P:= (fun st : state => m <= fst st x0)) (Q:= (fun st : state =>
-        ~(n - 1 = fst st x0 \/ (n + 1)%nat = fst st x0))). intros. unfold not. intros. destruct H6. unfold neq in H0. rewrite <- H6 in H5. lia.
+        ~(n - 1 = fst st x0 \/ (n + 1)%nat = fst st x0))). intros. unfold not. intros. destruct H6. unfold neqnat in H0. rewrite <- H6 in H5. lia.
          rewrite <- H6 in H5. lia.
         rewrite  <- H4 in H2. apply measure_P_eq_true with (P := (fun st : state =>
         n - 1 = fst st x0 \/ (n + 1)%nat = fst st x0)). easy.
@@ -588,7 +591,7 @@ uncoerce_basic. apply xgeq1. easy.
 apply HConseqRight with (eta2 :=   ({{ ((prob (x0 = (n - 1))) = twothird) /\ ((prob (x0 = (n + 1))) = onethird) /\ ((prob (true)) = 1)}})     ).
 unfold PAImplies. intros. uncoerce_basic H1. destruct H0. unfold Pteval in H0. easy. uncoerce_basic. apply xgeq1. easy. uncoerce_basic.
 split.
-apply xgeq1_m_UB with (x0 := x0) (n := n) (m := n). easy. unfold neq. intros Heq. lia. unfold neq. intros Heq. lia.
+apply xgeq1_m_UB with (x0 := x0) (n := n) (m := n). easy. unfold neqnat. intros Heq. lia. unfold neqnat. intros Heq. lia.
 apply HConseqRight with (eta2 :=   ({{ ((prob (x0 = (n - 1))) = twothird) /\ ((prob (x0 = (n + 1))) = onethird) /\ ((prob (true)) = 1)}})     ).
 unfold PAImplies. intros. uncoerce_basic H0. destruct H0. unfold Pteval in H0. destruct H1. rewrite H1. lra.
 uncoerce_basic. apply HAnd.
@@ -631,7 +634,7 @@ Proof.
 intros. uncoerce_basic. 
 apply HConseqRight with (eta2 := ({{ ((prob (x0 = 0)) = 0)}})).
 unfold PAImplies. uncoerce_basic. intros. rewrite <- H0. apply measure_inclusion.
-lia. uncoerce_basic. apply xgeq1_m. lia. unfold neq. lia. unfold neq. lia.
+lia. uncoerce_basic. apply xgeq1_m. lia. unfold neqnat. lia. unfold neqnat. lia.
 Qed.
 
 

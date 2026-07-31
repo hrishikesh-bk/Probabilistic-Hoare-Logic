@@ -15,6 +15,7 @@ From Coq Require Import Init.Logic.
 From Coq Require Import Lra.
 From Coq Require Import String.
 (* From Coq Require Import List. *)
+From Stdlib Require Import Vectors.Vector.
 Import Vector.VectorNotations.
 From Coq Require Import Vector.
 Import PHL.
