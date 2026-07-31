@@ -10,6 +10,7 @@ Now you can step through any of the files. In our test, all files were proved co
 
 To run the files:
 coq_makefile -f _CoqProject *.v -o Makefile 
+
 make
 
 To run one file:
