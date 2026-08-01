@@ -769,7 +769,7 @@ Definition kroll_pt (x : string) (k : nat) (eta : PAssertion) : PAssertion :=
  *)
 Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
   | HSkip :
-    forall (eta : PAssertion) (c : Cmd), hoare_triple eta c eta
+    forall (eta : PAssertion), hoare_triple eta Skip eta
   | HTAsgn : 
      forall (eta: PAssertion) (x : string) (e : Term), hoare_triple (tasgn_pt x e eta) (TAsgn x e) eta
   | HBAsgn : 
