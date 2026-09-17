@@ -59,18 +59,18 @@ intros. apply AddRigidRight.
   - uncoerce_basic.
  set (eta := (fun st : Pstate => ((Pteval (Pint {{true}}) st) = (PTerm_of_R 0 st)) /\ ((PTermexp_of_pterm (Pvar y2) st) = (PTerm_of_R 0 st)))). simpl in eta. unfold PTerm_of_R in eta.
    eapply HSeq with (eta1 := eta) (eta2 := eta) (eta3 := eta).
-  -- eapply HConseq with (eta1 := eta) (eta3 := eta) (eta4 := eta) (eta2:= (btoss_pt b (1/3)%R eta)).
+  -- eapply HConseq with (eta1 := eta) (eta3 := eta) (eta4 := eta) (eta2:= (btoss_pt b (1/3)%R ltac:(lra) eta)).
     2: easy. 2: apply HBToss.
     unfold PAImplies. intros. unfold eta. simpl. unfold btoss_pt. simpl. unfold PTerm_of_R. split.
-    --- unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. rewrite <- Rmult_plus_distr_r.
+    --- (* [MEASURE-FIX] *) simpl. try unfold measure_sub_bexp. try unfold assertion_sub_bexp. rewrite <- Rmult_plus_distr_r.
         replace ((1 / 3) + (1 - 1 / 3))%R with 1%R by field. rewrite Rmult_1_l. apply H.
     --- apply H.
  -- eapply HConseq with (eta1:= eta) (eta2:= (psfBpsf eta eta b)) (eta3 := ({{(y2 + y2 = (prob true)) /\ (y2 = 0)}})).
-  --- unfold PAImplies. intros. unfold psfBpsf. split. unfold PAcondB. unfold Measure_cond_B. simpl.
+  --- unfold PAImplies. intros. unfold psfBpsf. split. unfold PAcondB. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl.
       unfold eta. simpl. split. unfold PTerm_of_R. ---- unfold eta in H. destruct H. pose proof empty_measure_inclusion (fst ps).
       unfold assert_of_Prop in H1. pose proof H1 H. specialize (H2 (fun st => True /\ (snd st b))). apply H2. 
 ---- unfold eta in H. apply H.
----- unfold PAcondB. unfold Measure_cond_B. simpl. unfold eta. simpl. split.
+---- unfold PAcondB. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl. unfold eta. simpl. split.
       ----- unfold eta in H. destruct H. pose proof empty_measure_inclusion (fst ps). unfold assert_of_Prop in H1. pose proof H1 H. specialize (H2 (fun st : state => True /\ (~ (snd st b)))). apply H2.
       ----- unfold eta in H. destruct H. apply H0.
 --- simpl. unfold eta. unfold PTerm_of_R. unfold PAImplies. intros. split. destruct H. rewrite -> H0 in H. rewrite Rplus_0_l in H. symmetry. apply H. simpl. unfold eta. unfold PTerm_of_R. unfold PAImplies. intros. easy.
@@ -79,7 +79,7 @@ intros. apply AddRigidRight.
                   easy. unfold eta. unfold PAImplies. intros. destruct H. rewrite -> H. assumption. apply HTAsgn.
       ---- eapply HConseq with (eta1 := eta) (eta2 := (tasgn_pt x0 (<{x0  - 1}>) eta)) (eta3 := eta) (eta4 := (fun ps : Pstate => (snd ps y2) = (fst ps {{true}}))).
                   easy. unfold eta. unfold PAImplies. intros. destruct H. rewrite -> H. assumption. apply HTAsgn.
-      ----- unfold eta. unfold psfBpsf. unfold PAcondB. simpl. unfold Measure_cond_B. simpl. eapply HConseq with (eta2 := (fun ps : Pstate => ((snd ps y2) = (0%R)))) 
+      ----- unfold eta. unfold psfBpsf. unfold PAcondB. simpl. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl. eapply HConseq with (eta2 := (fun ps : Pstate => ((snd ps y2) = (0%R)))) 
 (eta1 := (fun ps : Pstate =>
    (((fst ps (fun st : state => True /\ (snd st b))) = (0%R)) /\
     ((snd ps y2) = (0%R))) /\
@@ -105,15 +105,15 @@ eapply HElimv with (y := y1) (p :=  (Preal 1%R)) (eta1 := ({{ ((prob ~(x0 >= 1))
     -- uncoerce_basic. Check  <{ x0 >= 1 }>.
        eapply HConseq with (eta2 := (psfBpsf ({{((prob true) = 0) /\ (y2 = 0) }}) ({{((prob  ~(x0>=1)) = 1) /\ ((prob  ~(x0>=1)) = (prob true)) /\ (y1 = 1) }}) (<{ x0 >= 1 }>))) 
                     (eta3 :=  ({{ (y2 + y1 = (prob ~(x0 >=1)) /\ y1 = 1 /\ y2 = 0) /\ (y2 + y1 = (prob true) /\ y1 = 1 /\ y2 = 0)  }})).
-        --- uncoerce_basic. unfold PAImplies. intros. unfold psfBpsf. split. unfold PAcondB. simpl. split. unfold Measure_cond_B. simpl. 
+        --- uncoerce_basic. unfold PAImplies. intros. unfold psfBpsf. split. unfold PAcondB. simpl. split. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl. 
             replace (fun st : state => True /\ 1 <= fst st x0) with (fun st : state => 1 <= fst st x0).
             pose proof measure_true_dest (fst ps) (fun st : state => 1 <= fst st x0).
             destruct H. destruct H. destruct H. rewrite -> H in H3. rewrite <- H3 in H0. rewrite H in H0. lra.
             apply functional_extensionality. intros. apply propositional_extensionality. easy.
             easy.
-           unfold PAcondB. simpl. split. unfold Measure_cond_B. simpl. replace (fun st : state => ~ 1 <= fst st x0 /\ ~ 1 <= fst st x0) with (fun st : state => ~ 1 <= fst st x0).
+           unfold PAcondB. simpl. split. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl. replace (fun st : state => ~ 1 <= fst st x0 /\ ~ 1 <= fst st x0) with (fun st : state => ~ 1 <= fst st x0).
            easy. apply functional_extensionality. intros. apply propositional_extensionality. split. intros. split. easy. easy.
-           easy. unfold Measure_cond_B. simpl. split. apply equivalence. easy. easy.
+           easy. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl. split. apply equivalence. easy. easy.
     --- uncoerce_basic. unfold PAImplies. intros. destruct H. destruct H0. destruct H1. rewrite H1 in H0. rewrite H2 in H0. replace 1%R with (0 + 1)%R. rewrite H1 in H. rewrite H2 in H.  easy. lra.
     --- uncoerce_basic. apply HAnd.
         apply HAnd.
@@ -198,14 +198,14 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
     apply HElimv. uncoerce_basic.
     apply HAnd.
        eapply HConseqLeft with (eta2 :=  (psfBpsf ifcase elsecase (<{x0 >= 1}>))).
-  --- simpl. unfold PAImplies. intros. uncoerce_basic H0. unfold psfBpsf. split. split. unfold Measure_cond_B. simpl. split. rewrite -> G. easy.
+  --- simpl. unfold PAImplies. intros. uncoerce_basic H0. unfold psfBpsf. split. split. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl. split. rewrite -> G. easy.
    rewrite G. destruct H0. destruct H0. rewrite H0. 
    pose proof  measure_inclusion_true (fst ps) (fun st : state => True /\ 1 <= fst st x0). unfold assert_of_Prop in H3. destruct H2. rewrite <- H2 in H3. rewrite -> H0 in H3.
    pose proof measure_inclusion (fst ps) (fun st : state => n = fst st x0)  (fun st : state => True /\ 1 <= fst st x0).
    assert (forall st : state, (fun st0 : state => n = fst st0 x0) st -> (fun st0 : state => True /\ 1 <= fst st0 x0) st).
    intros. split. easy. rewrite <- H6. easy. pose proof H5 H6. rewrite H0 in H7. apply Rle_antisym. easy. easy.
    ---- destruct H0. destruct H0. simpl. easy.
- ---- unfold PAcondB. unfold elsecase. simpl. unfold Measure_cond_B. simpl. split.
+ ---- unfold PAcondB. unfold elsecase. simpl. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl. split.
         -----
                assert (fst ps (fun st0 : state => n = fst st0 x0) = (fst ps  (fun st : state => 1 <= fst st x0))). apply Rle_antisym.
                      apply measure_inclusion. intros. rewrite <- H1. easy. destruct H0. destruct H0. destruct H2. rewrite H2. apply measure_inclusion_true.
@@ -227,11 +227,11 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
                 ----- apply HIfThen.
 ------ eapply HSeq with (eta2 := ({{ ifcase /\((prob b) = onethird) /\ ( (prob (~b)) = twothird)}})). unfold twothird. unfold onethird.
         ------- uncoerce_basic. unfold CBoolexp_of_bexp.
-                eapply HConseqLeft with (eta2 := (btoss_pt b (1 / 3)%R  (fun st : Pstate => ifcase st /\
+                eapply HConseqLeft with (eta2 := (btoss_pt b (1 / 3)%R ltac:(lra)  (fun st : Pstate => ifcase st /\
                                    fst st (fun st0 : state => Beval (BVar b) st0) = (1 / 3)%R /\
                                    fst st (fun st0 : state => ~ snd st0 b) = (2 / 3)%R))).
                 unfold PAImplies. unfold ifcase. intros. unfold btoss_pt. simpl. 
-                unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. simpl.
+                (* [MEASURE-FIX] *) simpl. try unfold measure_sub_bexp. try unfold assertion_sub_bexp. simpl.
                 destruct H0. destruct H0. rewrite -> H0. rewrite -> H0 in H2. rewrite <- H2. split.
                 lra. unfold t_update. simpl. rewrite <- H2. pose proof measure_false_is_zero (fst ps).
                 rewrite -> H3. split. lra.
@@ -248,7 +248,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
              rewrite -> H2 in H0. lra.
          uncoerce_basic. apply HAnd.
         apply HConseqLeft with (eta2 := (psfBpsf ({{ (((prob (x0 = n)) = (prob true))) /\ (y2 = 0) /\ (prob b) = onethird}})  ({{ (((prob (x0 = n)) = (prob true))) /\ ((prob (x0 = n)) = twothird)  /\ (y1 = twothird) /\ (prob (~b)) = twothird}}) (<{b}>))).
-      uncoerce_basic. unfold PAImplies. unfold psfBpsf. unfold ifcase. split. split. unfold Measure_cond_B. simpl. 
+      uncoerce_basic. unfold PAImplies. unfold psfBpsf. unfold ifcase. split. split. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl. 
        replace (fun st : state => True /\ snd st b) with (fun st : state => snd st b). apply Rle_antisym.
        apply measure_inclusion. easy. replace (fun st : state => snd st b) with (fun st : state =>  (n = fst st x0 /\ snd st b)
                                                                                                     \/ (~(n = fst st x0) /\ snd st b)).
@@ -261,9 +261,9 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
     apply measure_P_eq_true. easy. apply fin_additivity. easy. apply functional_extensionality. intros. apply propositional_extensionality.
     split. intros. destruct H1. easy. easy. intros. destruct (Nat.eq_dec n (fst x1 x0)) as [Heq | Hneq]. left. easy. right. easy.
     apply functional_extensionality. intros. apply propositional_extensionality. easy. simpl. split. easy.
-    unfold Measure_cond_B. uncoerce_basic. replace (fun st : state => snd st b /\ snd st b) with (fun st : state => snd st b). easy.
+    (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. uncoerce_basic. replace (fun st : state => snd st b /\ snd st b) with (fun st : state => snd st b). easy.
     apply functional_extensionality. intros. apply propositional_extensionality. easy.
-    unfold PAcondB. unfold Measure_cond_B. simpl.
+    unfold PAcondB. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl.
     replace (fun st : state => True /\ ~ snd st b) with (fun st : state => ~ snd st b). split. apply Rle_antisym.
        apply measure_inclusion. easy. replace (fun st : state => ~ snd st b) with (fun st : state =>  (n = fst st x0 /\ ~ snd st b)
                                                                                                     \/ (~(n = fst st x0) /\ ~ snd st b)).
@@ -287,7 +287,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
          apply HConseqRight with (eta2 := ({{ 0 = (prob (x0 = (n - 1))) /\ y2 = 0 }})).
           unfold PAImplies. uncoerce_basic. intros. lra. apply HAnd.
           --------- uncoerce_basic. apply HConseqLeft with (eta2 := (tasgn_pt x0 (<{ x0 + 1}>)  ({{0 = (prob (x0 = (n - 1)))}}))).
-                    unfold PAImplies. uncoerce_basic. intros. unfold tasgn_pt. unfold measure_sub_term. unfold assertion_sub_term. simpl.
+                    unfold PAImplies. uncoerce_basic. intros. unfold tasgn_pt. try unfold measure_sub_term. try unfold assertion_sub_term. simpl.
                     unfold t_update. simpl. rewrite String.eqb_refl. simpl. destruct H0.
                     pose proof (measure_P_eq_true (fst ps) ((fun st : state => n = fst st x0))) H0. simpl in H2. symmetry.
                     apply measure_inclusion_0 with (mu := fst ps) (P := (fun st : state => n - 1 = (fst st x0 + 1)%nat))
@@ -297,7 +297,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
      --------- apply HConseqRight with (eta2 := ({{ twothird = (prob (x0 = (n - 1))) /\ y1 = twothird }})).
                unfold PAImplies. uncoerce_basic. intros. lra. apply HAnd.
           ---------- uncoerce_basic. apply HConseqLeft with (eta2 := (tasgn_pt x0 (<{ x0 - 1}>)  ({{twothird = (prob (x0 = (n - 1)))}}))).
-                    unfold PAImplies. uncoerce_basic. intros. unfold tasgn_pt. unfold measure_sub_term. unfold assertion_sub_term. simpl.
+                    unfold PAImplies. uncoerce_basic. intros. unfold tasgn_pt. try unfold measure_sub_term. try unfold assertion_sub_term. simpl.
                     unfold t_update. simpl. rewrite String.eqb_refl. simpl. destruct H0. simpl. 
                    (* n = x to n-1 = x0 -1 *)
                     replace (fst ps (fun st : state => n - 1 = fst st x0 - 1)) with (fst ps (\{ (x0 = n)  /\ ((x0 - 1) = (n - 1)) \})).
@@ -325,11 +325,11 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
                 ------ apply HIfThen.
 ------- eapply HSeq with (eta2 := ({{ ifcase /\((prob b) = onethird) /\ ( (prob (~b)) = twothird)}})). unfold twothird. unfold onethird.
         -------- uncoerce_basic. unfold CBoolexp_of_bexp.
-                eapply HConseqLeft with (eta2 := (btoss_pt b (1 / 3)%R  (fun st : Pstate => ifcase st /\
+                eapply HConseqLeft with (eta2 := (btoss_pt b (1 / 3)%R ltac:(lra)  (fun st : Pstate => ifcase st /\
                                    fst st (fun st0 : state => Beval (BVar b) st0) = (1 / 3)%R /\
                                    fst st (fun st0 : state => ~ snd st0 b) = (2 / 3)%R))).
                 unfold PAImplies. unfold ifcase. intros. unfold btoss_pt. simpl. 
-                unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. simpl.
+                (* [MEASURE-FIX] *) simpl. try unfold measure_sub_bexp. try unfold assertion_sub_bexp. simpl.
                 destruct H0. destruct H0. rewrite -> H0. rewrite -> H0 in H2. rewrite <- H2. split.
                 lra. unfold t_update. simpl. rewrite <- H2. pose proof measure_false_is_zero (fst ps).
                 rewrite -> H3. split. lra.
@@ -346,7 +346,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
              rewrite -> H2 in H0. lra.
          uncoerce_basic. apply HAnd.
         apply HConseqLeft with (eta2 := (psfBpsf ({{ (((prob (x0 = n)) = (prob true))) /\ ((prob (x0 = n)) = onethird) /\ (y3 = onethird) /\ (prob b) = onethird}})  ({{ (((prob (x0 = n)) = (prob true))) /\ ((prob (x0 = n)) = twothird)  /\ (y2 = 0) /\ (prob (~b)) = twothird}}) (<{b}>))).
-       uncoerce_basic. unfold PAImplies. unfold psfBpsf. unfold ifcase. split. split. unfold Measure_cond_B. simpl. 
+       uncoerce_basic. unfold PAImplies. unfold psfBpsf. unfold ifcase. split. split. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl. 
        replace (fun st : state => True /\ snd st b) with (fun st : state => snd st b). apply Rle_antisym.
        apply measure_inclusion. easy. replace (fun st : state => snd st b) with (fun st : state =>  (n = fst st x0 /\ snd st b)
                                                                                                     \/ (~(n = fst st x0) /\ snd st b)).
@@ -358,12 +358,13 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
      replace 0%R with (fst ps (fun st : state => n <> fst st x0)). apply measure_inclusion. easy.
     apply measure_P_eq_true. easy. apply fin_additivity. easy. apply functional_extensionality. intros. apply propositional_extensionality.
     split. intros. destruct H1. easy. easy. intros. destruct (Nat.eq_dec n (fst x1 x0)) as [Heq | Hneq]. left. easy. right. easy.
-    apply functional_extensionality. intros. apply propositional_extensionality. easy. simpl. split. unfold Measure_cond_B. 
-    destruct H0. replace (fst ps (fun st : state => n = fst st x0 /\ Beval b st)) with (fst ps (fun st : state =>  Beval b st)).
+    apply functional_extensionality. intros. apply propositional_extensionality. easy. simpl. split. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. 
+    (* [MEASURE-FIX] pattern updated: Beval b st is now reduced to snd st b. *)
+    destruct H0. replace (fst ps (fun st : state => n = fst st x0 /\ snd st b)) with (fst ps (fun st : state => snd st b)).
     easy. apply AddTrue. easy.
-    unfold Measure_cond_B. uncoerce_basic. replace (fun st : state => snd st b /\ snd st b) with (fun st : state => snd st b). easy.
+    (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. uncoerce_basic. replace (fun st : state => snd st b /\ snd st b) with (fun st : state => snd st b). easy.
     apply functional_extensionality. intros. apply propositional_extensionality. easy.
-    unfold PAcondB. unfold Measure_cond_B. simpl.
+    unfold PAcondB. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. simpl.
     replace (fun st : state => True /\ ~ snd st b) with (fun st : state => ~ snd st b). split. apply Rle_antisym.
        apply measure_inclusion. easy. replace (fun st : state => ~ snd st b) with (fun st : state =>  (n = fst st x0 /\ ~ snd st b)
                                                                                                     \/ (~(n = fst st x0) /\ ~ snd st b)).
@@ -387,7 +388,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
      ---------- apply HConseqRight with (eta2 := ({{ onethird = (prob (x0 = (n + 1))) /\ y3 = onethird }})).
                unfold PAImplies. uncoerce_basic. intros. lra. apply HAnd.
           ----------- uncoerce_basic. apply HConseqLeft with (eta2 := (tasgn_pt x0 (<{ x0 + 1}>)  ({{onethird = (prob (x0 = (n + 1)))}}))).
-                    unfold PAImplies. uncoerce_basic. intros. unfold tasgn_pt. unfold measure_sub_term. unfold assertion_sub_term. simpl.
+                    unfold PAImplies. uncoerce_basic. intros. unfold tasgn_pt. try unfold measure_sub_term. try unfold assertion_sub_term. simpl.
                     unfold t_update. simpl. rewrite String.eqb_refl. simpl. destruct H0. simpl. 
                     (* n = x to n+1 = x0+1 *)
                     replace (fst ps (fun st : state => ((n + 1) = (fst st x0) + 1)%nat)) with (fst ps (\{ (x0 = n)  /\ ((x0 + 1) = (n + 1)) \})).
@@ -400,7 +401,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
        ---------- apply HConseqRight with (eta2 := ({{ 0 = (prob (x0 = (n + 1))) /\ y2 = 0 }})).
           unfold PAImplies. uncoerce_basic. intros. lra. apply HAnd.
           ----------- uncoerce_basic. apply HConseqLeft with (eta2 := (tasgn_pt x0 (<{ x0 - 1}>)  ({{0 = (prob (x0 = (n + 1)))}}))).
-                    unfold PAImplies. uncoerce_basic. intros. unfold tasgn_pt. unfold measure_sub_term. unfold assertion_sub_term. simpl.
+                    unfold PAImplies. uncoerce_basic. intros. unfold tasgn_pt. try unfold measure_sub_term. try unfold assertion_sub_term. simpl.
                     unfold t_update. simpl. rewrite String.eqb_refl. simpl. destruct H0.
                     pose proof (measure_P_eq_true (fst ps) ((fun st : state => n = fst st x0))) H0. simpl in H2. symmetry.
                     apply measure_inclusion_0 with (mu := fst ps) (P := (fun st : state => (n + 1)%nat = (fst st x0 - 1)%nat))
@@ -434,7 +435,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
      snd ps y1 = twothird /\ snd ps y2 = 0%R) /\
     snd ps y3 = onethird) /\ snd ps y4 = 1%R) ).
          unfold GamblersRuin_Body. apply HConseq with (eta2 := (psfBpsf ifcase2  elsecase (<{x0 >= 1}>)))  (eta3 := ({{ ( (y4 + y2 = (prob true)) /\ y4 = 1) /\ y2 = 0 }})).
-    ----- unfold ifcase2. unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold Measure_cond_B. unfold elsecase. uncoerce_basic. intros. 
+    ----- unfold ifcase2. unfold PAImplies. unfold psfBpsf. unfold PAcondB. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. unfold elsecase. uncoerce_basic. intros. 
                   destruct H0. destruct H0. destruct H0. destruct H3. 
                   replace (fun st : state => n = fst st x0 /\ 1 <= fst st x0) with (fun st : state => n = fst st x0).
                   split. split. split. split. rewrite <- H0. easy. split.
@@ -448,11 +449,11 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
            ------ apply HIfThen.
               ------- eapply HSeq with (eta2 := ({{ ifcase2 /\((prob b) = onethird) /\ ( (prob (~b)) = twothird)}})). unfold twothird. unfold onethird.
                        uncoerce_basic. unfold CBoolexp_of_bexp.
-                        eapply HConseqLeft with (eta2 := (btoss_pt b (1 / 3)%R  (fun st : Pstate => ifcase2 st /\
+                        eapply HConseqLeft with (eta2 := (btoss_pt b (1 / 3)%R ltac:(lra)  (fun st : Pstate => ifcase2 st /\
                                    fst st (fun st0 : state => Beval (BVar b) st0) = (1 / 3)%R /\
                                    fst st (fun st0 : state => ~ snd st0 b) = (2 / 3)%R))).
                 unfold PAImplies. unfold ifcase2. intros. unfold btoss_pt. simpl. 
-                unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. simpl.
+                (* [MEASURE-FIX] *) simpl. try unfold measure_sub_bexp. try unfold assertion_sub_bexp. simpl.
                 destruct H0. destruct H0. destruct H0. destruct H3. rewrite -> H0. rewrite -> H0 in H3. rewrite <- H2. split.
                 lra. unfold t_update. simpl. pose proof measure_false_is_zero (fst ps).
                 rewrite <- H3. rewrite H5. split. lra.
@@ -467,7 +468,7 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
       unfold PAImplies. uncoerce_basic. unfold twothird. unfold onethird. intros. destruct H0. rewrite <- H0. lra.
       apply HAnd. 
         -------- apply HConseqLeft with (eta2 := (psfBpsf ({{(prob true) = onethird  /\  y3 = onethird}}) ({{(prob true) = twothird /\ y1 = twothird}}) (<{b}>))).
-            --------- unfold PAImplies. unfold ifcase2. unfold psfBpsf. unfold PAcondB. unfold Measure_cond_B. uncoerce_basic. intros. 
+            --------- unfold PAImplies. unfold ifcase2. unfold psfBpsf. unfold PAcondB. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B. uncoerce_basic. intros. 
                       replace (fun st : state => True /\ snd st b) with (CBoolexp_of_bexp (BVar b)).
                       replace (fun st : state => True /\ ~ snd st b) with (fun st : state => ~ snd st b).
                       lra. 
@@ -475,23 +476,23 @@ uncoerce_basic Hlpr. rewrite <- Hlpr. apply HElimv.
                       apply functional_extensionality. intros. apply propositional_extensionality. easy.
         --------- apply HIfThen. 
                 ---------- apply HConseqLeft with (eta2 := (tasgn_pt x0 (<{ x0 + 1}>)  ({{ y3 = (prob true) }}))).
-                           unfold PAImplies. unfold tasgn_pt. unfold measure_sub_term. unfold assertion_sub_term. uncoerce_basic. intros. lra.
+                           unfold PAImplies. unfold tasgn_pt. try unfold measure_sub_term. try unfold assertion_sub_term. uncoerce_basic. intros. lra.
                            apply HTAsgn.
                 ---------- apply HConseqLeft with (eta2 := (tasgn_pt x0 (<{ x0 - 1}>)  ({{ y1 = (prob true) }}))).
-                           unfold PAImplies. unfold tasgn_pt. unfold measure_sub_term. unfold assertion_sub_term. uncoerce_basic. intros. lra.
+                           unfold PAImplies. unfold tasgn_pt. try unfold measure_sub_term. try unfold assertion_sub_term. uncoerce_basic. intros. lra.
                            apply HTAsgn.  
         -------- unfold ifcase2. apply HAnd.
-        --------- apply HConseqLeft with (eta2 := ({{ y1 = twothird}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. unfold Measure_cond_B.
+        --------- apply HConseqLeft with (eta2 := ({{ y1 = twothird}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B.
         uncoerce_basic. intros. lra. apply RigidUnchanged.
-        --------- apply HAnd. apply HConseqLeft with (eta2 := ({{ y3 = onethird}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. unfold Measure_cond_B.
+        --------- apply HAnd. apply HConseqLeft with (eta2 := ({{ y3 = onethird}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B.
         uncoerce_basic. intros. lra. apply RigidUnchanged.
-        ---------- apply HConseqLeft with (eta2 := ({{ y4 = 1}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. unfold Measure_cond_B.
+        ---------- apply HConseqLeft with (eta2 := ({{ y4 = 1}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B.
         uncoerce_basic. intros. lra. apply RigidUnchanged.
 
 ------- unfold elsecase. apply HConseqLeft with (eta2 := ({{ y2 = (prob true)}})). unfold PAImplies. uncoerce_basic. intros. lra. apply HSkip.
------- apply HConseqLeft with (eta2 := ({{ y4 = 1}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. unfold Measure_cond_B.
+------ apply HConseqLeft with (eta2 := ({{ y4 = 1}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B.
         uncoerce_basic. intros. lra. apply RigidUnchanged.
------- apply HConseqLeft with (eta2 := ({{ y2 = 0}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. unfold Measure_cond_B.
+------ apply HConseqLeft with (eta2 := ({{ y2 = 0}})). unfold PAImplies. unfold psfBpsf. unfold PAcondB. unfold ifcase2. unfold elsecase. (* [MEASURE-FIX] *) rewrite ?Measure_cond_B_app; cbv beta; try unfold Measure_cond_B.
         uncoerce_basic. intros. lra. apply RigidUnchanged.
     ---- easy.
     ---- easy.

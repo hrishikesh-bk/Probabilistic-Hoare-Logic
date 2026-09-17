@@ -28,7 +28,17 @@ Definition z : string := "z".
 Definition y1 : string := "y1".
 Definition y2 : string := "y2".
 
-Definition CondSamples (p : R) (q : R) : Cmd :=
+(* [MEASURE-FIX] p and q are toss rates, so they must be probabilities:
+   the lemmas below were previously stated for ALL reals, including values
+   for which [x toss p] does not denote a measure at all.  Sectioning the
+   bound attaches it to every lemma in the section automatically, without
+   disturbing the proof scripts. *)
+Section RateBounds.
+Variable p q : R.
+Hypothesis Hp : (0 <= p <= 1)%R.
+Hypothesis Hq : (0 <= q <= 1)%R.
+
+Definition CondSamples : Cmd :=
 <{
   z toss 0.5;
   if z then x toss p; y toss p
@@ -36,16 +46,16 @@ Definition CondSamples (p : R) (q : R) : Cmd :=
   
 }>.
 
-Lemma z_true_1 : forall (p : R), hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = 0.5 }}) <{ x toss p; y toss p }> ({{(prob (z <-> true)) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := ({{(prob (z <-> true)) = y1 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p ({{(prob (z <-> true)) = y1 }}))).
+Lemma z_true_1 : hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = 0.5 }}) <{ x toss p; y toss p }> ({{(prob (z <-> true)) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := ({{(prob (z <-> true)) = y1 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) ({{(prob (z <-> true)) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps (fun st : state => ((x !-> True; (snd st)) z) <-> True)) with (fst ps (fun st : state => ((snd st) z) <-> True)). 
             replace (fst ps (fun st : state => ((x !-> False; (snd st)) z) <-> True)) with (fst ps (fun st : state => ((snd st) z) <-> True)). lra.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y p ({{(prob (z <-> true)) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob (z <-> true)) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps (fun st : state => ((y !-> True; (snd st)) z) <-> True)) with (fst ps (fun st : state => ((snd st) z) <-> True)). 
             replace (fst ps (fun st : state => ((y !-> False; (snd st)) z) <-> True)) with (fst ps (fun st : state => ((snd st) z) <-> True)). lra.
@@ -54,16 +64,16 @@ Proof. intro p. apply HSeq with (eta2 := ({{(prob (z <-> true)) = y1 }})).
           - apply HBToss.
 Qed.
 
-Lemma z_true_2 : forall (q : R), hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) <{ x toss q; y toss q }> ({{(prob (z <-> true)) = y2 }}).
-Proof. intro q. apply HSeq with (eta2 := ({{(prob (z <-> true)) = y2 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q ({{(prob (z <-> true)) = y2 }}))).
+Lemma z_true_2 : hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) <{ x toss q; y toss q }> ({{(prob (z <-> true)) = y2 }}).
+Proof. idtac. apply HSeq with (eta2 := ({{(prob (z <-> true)) = y2 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) ({{(prob (z <-> true)) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps (fun st : state => ((x !-> True; (snd st)) z) <-> True)) with (fst ps (fun st : state => ((snd st) z) <-> True)). 
             replace (fst ps (fun st : state => ((x !-> False; (snd st)) z) <-> True)) with (fst ps (fun st : state => ((snd st) z) <-> True)). lra.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y q ({{(prob (z <-> true)) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob (z <-> true)) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps (fun st : state => ((y !-> True; (snd st)) z) <-> True)) with (fst ps (fun st : state => ((snd st) z) <-> True)). 
             replace (fst ps (fun st : state => ((y !-> False; (snd st)) z) <-> True)) with (fst ps (fun st : state => ((snd st) z) <-> True)). lra.
@@ -72,20 +82,20 @@ Proof. intro q. apply HSeq with (eta2 := ({{(prob (z <-> true)) = y2 }})).
           - apply HBToss.
 Qed.
 
-Lemma z_true_int : forall (p q : R), hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = 0.5) /\ y2 = 0}}) <{if z then x toss p; y toss p
+Lemma z_true_int : hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = 0.5) /\ y2 = 0}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob (z <-> true)) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = 0.5 }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
+Proof. idtac. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = 0.5 }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose z_true_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y1) = (fst ps (fun st : state => (snd st z) <-> True))) with (fun ps : Pstate => (fst ps (fun st : state => (snd st z) <-> True)) = (snd ps y1)).
-            apply z_true_1 with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply z_true_1 . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose z_true_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y2) = (fst ps (fun st : state => (snd st z) <-> True))) with (fun ps : Pstate => (fst ps (fun st : state => (snd st z) <-> True)) = (snd ps y2)).
-            apply z_true_2 with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply z_true_2 . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma z_true : forall (p q : R), hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma z_true : hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{0.5 = (prob (z <-> true)) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
+Proof. idtac. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> True) /\ (snd st z))) with (fst ps (fun st : state => ((snd st z) <-> True))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto.
@@ -99,16 +109,16 @@ Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z
             * apply eliminate_y. easy. easy. apply z_true_int.
 Qed.
 
-Lemma z_false_1 : forall (p : R), hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (z <-> false)) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := ({{(prob (z <-> false)) = y1 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p ({{(prob (z <-> false)) = y1 }}))).
+Lemma z_false_1 : hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (z <-> false)) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := ({{(prob (z <-> false)) = y1 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) ({{(prob (z <-> false)) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps (fun st : state => ((x !-> True; (snd st)) z) <-> False)) with (fst ps (fun st : state => ((snd st) z) <-> False)). 
             replace (fst ps (fun st : state => ((x !-> False; (snd st)) z) <-> False)) with (fst ps (fun st : state => ((snd st) z) <-> False)). lra.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y p ({{(prob (z <-> false)) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob (z <-> false)) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps (fun st : state => ((y !-> True; (snd st)) z) <-> False)) with (fst ps (fun st : state => ((snd st) z) <-> False)). 
             replace (fst ps (fun st : state => ((y !-> False; (snd st)) z) <-> False)) with (fst ps (fun st : state => ((snd st) z) <-> False)). lra.
@@ -117,16 +127,16 @@ Proof. intro p. apply HSeq with (eta2 := ({{(prob (z <-> false)) = y1 }})).
           - apply HBToss.
 Qed.
 
-Lemma z_false_2 : forall (q : R), hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = 0.5 }}) <{ x toss q; y toss q }> ({{(prob (z <-> false)) = y2 }}).
-Proof. intro q. apply HSeq with (eta2 := ({{(prob (z <-> false)) = y2 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q ({{(prob (z <-> false)) = y2 }}))).
+Lemma z_false_2 : hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = 0.5 }}) <{ x toss q; y toss q }> ({{(prob (z <-> false)) = y2 }}).
+Proof. idtac. apply HSeq with (eta2 := ({{(prob (z <-> false)) = y2 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) ({{(prob (z <-> false)) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps (fun st : state => ((x !-> True; (snd st)) z) <-> False)) with (fst ps (fun st : state => ((snd st) z) <-> False)). 
             replace (fst ps (fun st : state => ((x !-> False; (snd st)) z) <-> False)) with (fst ps (fun st : state => ((snd st) z) <-> False)). lra.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y q ({{(prob (z <-> false)) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob (z <-> false)) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps (fun st : state => ((y !-> True; (snd st)) z) <-> False)) with (fst ps (fun st : state => ((snd st) z) <-> False)). 
             replace (fst ps (fun st : state => ((y !-> False; (snd st)) z) <-> False)) with (fst ps (fun st : state => ((snd st) z) <-> False)). lra.
@@ -135,20 +145,20 @@ Proof. intro q. apply HSeq with (eta2 := ({{(prob (z <-> false)) = y2 }})).
           - apply HBToss.
 Qed.
 
-Lemma z_false_int : forall (p q : R), hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = 0.5}}) <{if z then x toss p; y toss p
+Lemma z_false_int : hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = 0.5}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob (z <-> false)) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = 0.5 }}) (z) )).
+Proof. idtac. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = 0.5 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose z_false_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y1) = (fst ps (fun st : state => (snd st z) <-> False))) with (fun ps : Pstate => (fst ps (fun st : state => (snd st z) <-> False)) = (snd ps y1)).
-            apply z_false_1 with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply z_false_1 . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose z_false_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y2) = (fst ps (fun st : state => (snd st z) <-> False))) with (fun ps : Pstate => (fst ps (fun st : state => (snd st z) <-> False)) = (snd ps y2)).
-            apply z_false_2 with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply z_false_2 . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma z_false : forall (p q : R), hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma z_false : hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{0.5 = (prob (z <-> false)) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
+Proof. idtac. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> False) /\ (~ (snd st z)))) with (fst ps (fun st : state => ((snd st z) <-> False))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto.  
@@ -162,9 +172,9 @@ Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ 
             * apply eliminate_y. easy. easy. apply z_false_int.
 Qed.
 
-Lemma x_true_z_true_1 : forall (p : R), hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> true) /\ (z <-> true))) = y1 }}). 
-Proof. intro p. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> true))) = y1 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p ({{(prob ((x <-> true) /\ (z <-> true))) = y1 }}))).
+Lemma x_true_z_true_1 : hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> true) /\ (z <-> true))) = y1 }}). 
+Proof. idtac. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> true))) = y1 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) ({{(prob ((x <-> true) /\ (z <-> true))) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -179,7 +189,7 @@ Proof. intro p. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> true))
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y p ({{(prob ((x <-> true) /\ (z <-> true))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((x <-> true) /\ (z <-> true))) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -196,9 +206,9 @@ Proof. intro p. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> true))
           - apply HBToss.
 Qed.
 
-Lemma x_true_z_true_2 : forall (q : R), hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> true) /\ (z <-> true))) = y2 }}). 
-Proof. intro q. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> true))) = y2 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q ({{(prob ((x <-> true) /\ (z <-> true))) = y2 }}))).
+Lemma x_true_z_true_2 : hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> true) /\ (z <-> true))) = y2 }}). 
+Proof. idtac. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> true))) = y2 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) ({{(prob ((x <-> true) /\ (z <-> true))) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -213,7 +223,7 @@ Proof. intro q. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> true))
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y q ({{(prob ((x <-> true) /\ (z <-> true))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((x <-> true) /\ (z <-> true))) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -230,20 +240,20 @@ Proof. intro q. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> true))
           - apply HBToss.
 Qed.
 
-Lemma x_true_z_true_int : forall (p q : R), hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*p)) /\ y2 = 0}}) <{if z then x toss p; y toss p
+Lemma x_true_z_true_int : hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*p)) /\ y2 = 0}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((x <-> true) /\ (z <-> true))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
+Proof. idtac. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_true_z_true_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y1) = (fst ps (fun st : state => ((snd st x) <-> True) /\ ((snd st z) <-> True)))) with (fun ps : Pstate => (fst ps (fun st : state => ((snd st x) <-> True) /\ ((snd st z) <-> True))) = (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_true_z_true_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y2) = (fst ps (fun st : state => ((snd st x) <-> True) /\ ((snd st z) <-> True)))) with (fun ps : Pstate => (fst ps (fun st : state => ((snd st x) <-> True) /\ ((snd st z) <-> True))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_true_z_true : forall (p q : R), hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_true_z_true : hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*p) = (prob ((x <-> true) /\ (z <-> true))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
+Proof. idtac. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> True) /\ (snd st z))) with (fst ps (fun st : state => ((snd st z) <-> True))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto.
@@ -257,15 +267,15 @@ Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z
             * apply eliminate_y. easy. easy. apply x_true_z_true_int.
 Qed.
 
-Lemma x_false_z_true_1 : forall (p t : R), t = (1 - p)%R ->
+Lemma x_false_z_true_1 : forall (t : R), t = (1 - p)%R ->
   hoare_triple
     ({{ ((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t) }})
     <{ x toss p; y toss p }>
     ({{ (prob ((x <-> false) /\ (z <-> true))) = y1 }}).
 Proof.
-  intros p t Ht.
+  intros t Ht.
   apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> true))) = y1 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p ({{(prob ((x <-> false) /\ (z <-> true))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) ({{(prob ((x <-> false) /\ (z <-> true))) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -280,7 +290,7 @@ Proof.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y p ({{(prob ((x <-> false) /\ (z <-> true))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((x <-> false) /\ (z <-> true))) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -297,13 +307,13 @@ Proof.
           - apply HBToss.
 Qed.
 
-Lemma x_false_z_true_2 : forall (q : R),
+Lemma x_false_z_true_2 : 
   hoare_triple
     ({{ ((prob (z <-> true)) = 0) /\ y2 = 0 }})
     <{ x toss q; y toss q }>
     ({{ (prob ((x <-> false) /\ (z <-> true))) = y2 }}).
-Proof. intro q. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> true))) = y2 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q ({{(prob ((x <-> false) /\ (z <-> true))) = y2 }}))).
+Proof. idtac. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> true))) = y2 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) ({{(prob ((x <-> false) /\ (z <-> true))) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -318,7 +328,7 @@ Proof. intro q. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> true)
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y q ({{(prob ((x <-> false) /\ (z <-> true))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((x <-> false) /\ (z <-> true))) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -335,20 +345,20 @@ Proof. intro q. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> true)
           - apply HBToss.
 Qed.
 
-Lemma x_false_z_true_int : forall (p q t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*t)) /\ y2 = 0}}) <{if z then x toss p; y toss p
+Lemma x_false_z_true_int : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*t)) /\ y2 = 0}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((x <-> false) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_false_z_true_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y1) = (fst ps (fun st : state => ((snd st x) <-> False) /\ ((snd st z) <-> True)))) with (fun ps : Pstate => (fst ps (fun st : state => ((snd st x) <-> False) /\ ((snd st z) <-> True))) = (snd ps y1)).
-            apply H with (p := p). easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_false_z_true_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y2) = (fst ps (fun st : state => ((snd st x) <-> False) /\ ((snd st z) <-> True)))) with (fun ps : Pstate => (fst ps (fun st : state => ((snd st x) <-> False) /\ ((snd st z) <-> True))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_false_z_true : forall (p q t: R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_false_z_true : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*t) = (prob ((x <-> false) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> True) /\ (snd st z))) with (fst ps (fun st : state => ((snd st z) <-> True))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto.
@@ -362,9 +372,9 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true)
             * apply eliminate_y. easy. easy. apply x_false_z_true_int. easy.
 Qed.
 
-Lemma y_true_z_true_1 : forall (p : R), hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p) }}) <{ x toss p; y toss p }> ({{(prob ((y <-> true) /\ (z <-> true))) = y1 }}). 
-Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((y <-> true) /\ (z <-> true))) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob ((y <-> true) /\ (z <-> true))) = y1 }})))).
+Lemma y_true_z_true_1 : hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p) }}) <{ x toss p; y toss p }> ({{(prob ((y <-> true) /\ (z <-> true))) = y1 }}). 
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((y <-> true) /\ (z <-> true))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob ((y <-> true) /\ (z <-> true))) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -398,9 +408,9 @@ Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((y <-> true) /\
         + apply HBToss.
 Qed. 
 
-Lemma y_true_z_true_2 : forall (q : R), hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((y <-> true) /\ (z <-> true))) = y2 }}). 
-Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((y <-> true) /\ (z <-> true))) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob ((y <-> true) /\ (z <-> true))) = y2 }})))).
+Lemma y_true_z_true_2 : hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((y <-> true) /\ (z <-> true))) = y2 }}). 
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((y <-> true) /\ (z <-> true))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob ((y <-> true) /\ (z <-> true))) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -434,20 +444,20 @@ Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((y <-> true) /\
         + apply HBToss.
 Qed. 
 
-Lemma y_true_z_true_int : forall (p q : R), hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*p)) /\ y2 = 0}}) <{if z then x toss p; y toss p
+Lemma y_true_z_true_int : hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*p)) /\ y2 = 0}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((y <-> true) /\ (z <-> true))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
+Proof. idtac. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose y_true_z_true_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y1) = (fst ps (fun st : state => ((snd st y) <-> True) /\ ((snd st z) <-> True)))) with (fun ps : Pstate => (fst ps (fun st : state => ((snd st y) <-> True) /\ ((snd st z) <-> True))) = (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose y_true_z_true_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y2) = (fst ps (fun st : state => ((snd st y) <-> True) /\ ((snd st z) <-> True)))) with (fun ps : Pstate => (fst ps (fun st : state => ((snd st y) <-> True) /\ ((snd st z) <-> True))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma y_true_z_true : forall (p q : R), hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma y_true_z_true : hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*p) = (prob ((y <-> true) /\ (z <-> true))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
+Proof. idtac. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> True) /\ (snd st z))) with (fst ps (fun st : state => ((snd st z) <-> True))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto.
@@ -461,15 +471,15 @@ Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z
             * apply eliminate_y. easy. easy. apply y_true_z_true_int.
 Qed.
 
-Lemma y_false_z_true_1 : forall (p t : R), t = (1 - p)%R ->
+Lemma y_false_z_true_1 : forall (t : R), t = (1 - p)%R ->
   hoare_triple
     ({{ ((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t) }})
     <{ x toss p; y toss p }>
     ({{ (prob ((y <-> false) /\ (z <-> true))) = y1 }}).
 Proof.
-  intros p t Ht.
-  apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((y <-> false) /\ (z <-> true))) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob ((y <-> false) /\ (z <-> true))) = y1 }})))).
+  intros t Ht.
+  apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((y <-> false) /\ (z <-> true))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob ((y <-> false) /\ (z <-> true))) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -503,13 +513,13 @@ Proof.
         + apply HBToss.
 Qed. 
 
-Lemma y_false_z_true_2 : forall (q : R),
+Lemma y_false_z_true_2 : 
   hoare_triple
     ({{ ((prob (z <-> true)) = 0) /\ y2 = 0 }})
     <{ x toss q; y toss q }>
     ({{ (prob ((y <-> false) /\ (z <-> true))) = y2 }}).
-Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((y <-> false) /\ (z <-> true))) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob ((y <-> false) /\ (z <-> true))) = y2 }})))).
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((y <-> false) /\ (z <-> true))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob ((y <-> false) /\ (z <-> true))) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -543,20 +553,20 @@ Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((y <-> false) /
         + apply HBToss.
 Qed.
 
-Lemma y_false_z_true_int : forall (p q t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*t)) /\ y2 = 0}}) <{if z then x toss p; y toss p
+Lemma y_false_z_true_int : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*t)) /\ y2 = 0}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((y <-> false) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose y_false_z_true_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y1) = (fst ps (fun st : state => ((snd st y) <-> False) /\ ((snd st z) <-> True)))) with (fun ps : Pstate => (fst ps (fun st : state => ((snd st y) <-> False) /\ ((snd st z) <-> True))) = (snd ps y1)).
-            apply H with (p := p). easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose y_false_z_true_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate => (snd ps y2) = (fst ps (fun st : state => ((snd st y) <-> False) /\ ((snd st z) <-> True)))) with (fun ps : Pstate => (fst ps (fun st : state => ((snd st y) <-> False) /\ ((snd st z) <-> True))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma y_false_z_true : forall (p q t: R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma y_false_z_true : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*t) = (prob ((y <-> false) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> True) /\ (snd st z))) with (fst ps (fun st : state => ((snd st z) <-> True))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto.
@@ -570,9 +580,9 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true)
             * apply eliminate_y. easy. easy. apply y_false_z_true_int. easy.
 Qed.
 
-Lemma x_true_z_false_1 : forall (p : R), hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob ((x <-> true) /\ (z <-> false))) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> false))) = y1 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p ({{(prob ((x <-> true) /\ (z <-> false))) = y1 }}))).
+Lemma x_true_z_false_1 : hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob ((x <-> true) /\ (z <-> false))) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> false))) = y1 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) ({{(prob ((x <-> true) /\ (z <-> false))) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -584,7 +594,7 @@ Proof. intro p. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> false)
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y p ({{(prob ((x <-> true) /\ (z <-> false))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((x <-> true) /\ (z <-> false))) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -601,9 +611,9 @@ Proof. intro p. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> false)
           - apply HBToss.
 Qed.
 
-Lemma x_true_z_false_2 : forall (q : R), hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> true) /\ (z <-> false))) = y2 }}).
-Proof. intro q. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> false))) = y2 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q ({{(prob ((x <-> true) /\ (z <-> false))) = y2 }}))).
+Lemma x_true_z_false_2 : hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> true) /\ (z <-> false))) = y2 }}).
+Proof. idtac. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> false))) = y2 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) ({{(prob ((x <-> true) /\ (z <-> false))) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -615,7 +625,7 @@ Proof. intro q. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> false)
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y q ({{(prob ((x <-> true) /\ (z <-> false))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((x <-> true) /\ (z <-> false))) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -632,24 +642,24 @@ Proof. intro q. apply HSeq with (eta2 := ({{(prob ((x <-> true) /\ (z <-> false)
           - apply HBToss.
 Qed.
 
-Lemma x_true_z_false_int : forall (p q : R), hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*q)}}) <{if z then x toss p; y toss p
+Lemma x_true_z_false_int : hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*q)}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((x <-> true) /\ (z <-> false))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q) }}) (z) )).
+Proof. idtac. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q) }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_true_z_false_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y1) = (fst ps (fun st : state => ((snd st x) <-> True) /\ ((snd st z) <-> False)))) with (fun ps : Pstate =>
    (fst ps (fun st : state => ((snd st x) <-> True) /\ ((snd st z) <-> False))) = (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_true_z_false_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) = (fst ps (fun st : state => ((snd st x) <-> True) /\ ((snd st z) <-> False)))) with (fun ps : Pstate =>
    (fst ps (fun st : state => ((snd st x) <-> True) /\ ((snd st z) <-> False))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_true_z_false : forall (p q : R), hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_true_z_false : hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{0.5*q = (prob ((x <-> true) /\ (z <-> false))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
+Proof. idtac. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> False) /\ (~ (snd st z)))) with (fst ps (fun st : state => ((snd st z) <-> False))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto.  
@@ -663,9 +673,9 @@ Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ 
             * apply eliminate_y. easy. easy. apply x_true_z_false_int.
 Qed.
 
-Lemma x_false_z_false_1 : forall (p : R),hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob ((x <-> false) /\ (z <-> false))) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> false))) = y1 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p ({{(prob ((x <-> false) /\ (z <-> false))) = y1 }}))).
+Lemma x_false_z_false_1 : hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob ((x <-> false) /\ (z <-> false))) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> false))) = y1 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) ({{(prob ((x <-> false) /\ (z <-> false))) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -677,7 +687,7 @@ Proof. intro p. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> false
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y p ({{(prob ((x <-> false) /\ (z <-> false))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((x <-> false) /\ (z <-> false))) = y1 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -694,9 +704,9 @@ Proof. intro p. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> false
           - apply HBToss.
 Qed.
 
-Lemma x_false_z_false_2 : forall (q t: R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> false) /\ (z <-> false))) = y2 }}).
-Proof. intros q t Ht. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> false))) = y2 }})).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q ({{(prob ((x <-> false) /\ (z <-> false))) = y2 }}))).
+Lemma x_false_z_false_2 : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> false) /\ (z <-> false))) = y2 }}).
+Proof. intros t Ht. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <-> false))) = y2 }})).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) ({{(prob ((x <-> false) /\ (z <-> false))) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -708,7 +718,7 @@ Proof. intros q t Ht. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <->
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
             apply equivalence. unfold Assertion_equiv. intro. rewrite t_update_eq. rewrite t_update_neq. tauto. easy.
           - apply HBToss.
-        + apply HConseqLeft with (eta2 := (btoss_pt y q ({{(prob ((x <-> false) /\ (z <-> false))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((x <-> false) /\ (z <-> false))) = y2 }}))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
        (fun st : state =>
@@ -725,24 +735,24 @@ Proof. intros q t Ht. apply HSeq with (eta2 := ({{(prob ((x <-> false) /\ (z <->
           - apply HBToss.
 Qed.
 
-Lemma x_false_z_false_int : forall (p q t: R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*t)}}) <{if z then x toss p; y toss p
+Lemma x_false_z_false_int : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*t)}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((x <-> false) /\ (z <-> false))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t) }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t) }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_false_z_false_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y1) = (fst ps (fun st : state => ((snd st x) <-> False) /\ ((snd st z) <-> False)))) with (fun ps : Pstate =>
    (fst ps (fun st : state => ((snd st x) <-> False) /\ ((snd st z) <-> False))) = (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_false_z_false_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) = (fst ps (fun st : state => ((snd st x) <-> False) /\ ((snd st z) <-> False)))) with (fun ps : Pstate =>
    (fst ps (fun st : state => ((snd st x) <-> False) /\ ((snd st z) <-> False))) = (snd ps y2)).
-            apply H with (q := q). apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_false_z_false : forall (p q t: R), (t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_false_z_false : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{0.5*t = (prob ((x <-> false) /\ (z <-> false))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> False) /\ (~ (snd st z)))) with (fst ps (fun st : state => ((snd st z) <-> False))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto.  
@@ -756,9 +766,9 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false
             * apply eliminate_y. easy. easy. apply x_false_z_false_int. easy.
 Qed.
 
-Lemma y_true_z_false_1 : forall (p : R), hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob ((y <-> true) /\ (z <-> false))) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((y <-> true) /\ (z <-> false))) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob ((y <-> true) /\ (z <-> false))) = y1 }})))).
+Lemma y_true_z_false_1 : hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob ((y <-> true) /\ (z <-> false))) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((y <-> true) /\ (z <-> false))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob ((y <-> true) /\ (z <-> false))) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -785,9 +795,9 @@ Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((y <-> true) /\
         + apply HBToss.
 Qed.
 
-Lemma y_true_z_false_2 : forall (q : R), hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q) }}) <{ x toss q; y toss q }> ({{(prob ((y <-> true) /\ (z <-> false))) = y2 }}).
-Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((y <-> true) /\ (z <-> false))) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob ((y <-> true) /\ (z <-> false))) = y2 }})))).
+Lemma y_true_z_false_2 : hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q) }}) <{ x toss q; y toss q }> ({{(prob ((y <-> true) /\ (z <-> false))) = y2 }}).
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((y <-> true) /\ (z <-> false))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob ((y <-> true) /\ (z <-> false))) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -814,24 +824,24 @@ Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((y <-> true) /\
         + apply HBToss.
 Qed.
 
-Lemma y_true_z_false_int : forall (p q : R), hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*q)}}) <{if z then x toss p; y toss p
+Lemma y_true_z_false_int : hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*q)}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((y <-> true) /\ (z <-> false))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q) }}) (z) )).
+Proof. idtac. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q) }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose y_true_z_false_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y1) = (fst ps (fun st : state => ((snd st y) <-> True) /\ ((snd st z) <-> False)))) with (fun ps : Pstate =>
    (fst ps (fun st : state => ((snd st y) <-> True) /\ ((snd st z) <-> False))) = (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose y_true_z_false_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) = (fst ps (fun st : state => ((snd st y) <-> True) /\ ((snd st z) <-> False)))) with (fun ps : Pstate =>
    (fst ps (fun st : state => ((snd st y) <-> True) /\ ((snd st z) <-> False))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma y_true_z_false : forall (p q : R), hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma y_true_z_false : hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{0.5*q = (prob ((y <-> true) /\ (z <-> false))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
+Proof. idtac. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> False) /\ (~ (snd st z)))) with (fst ps (fun st : state => ((snd st z) <-> False))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto.  
@@ -845,9 +855,9 @@ Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ 
             * apply eliminate_y. easy. easy. apply y_true_z_false_int.
 Qed.
 
-Lemma y_false_z_false_1 : forall (p : R),hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob ((y <-> false) /\ (z <-> false))) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((y <-> false) /\ (z <-> false))) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob ((y <-> false) /\ (z <-> false))) = y1 }})))).
+Lemma y_false_z_false_1 : hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob ((y <-> false) /\ (z <-> false))) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((y <-> false) /\ (z <-> false))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob ((y <-> false) /\ (z <-> false))) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -874,9 +884,9 @@ Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((y <-> false) /
         + apply HBToss. 
 Qed.
 
-Lemma y_false_z_false_2 : forall (q t: R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t) }}) <{ x toss q; y toss q }> ({{(prob ((y <-> false) /\ (z <-> false))) = y2 }}).
-Proof. intros q t Ht. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((y <-> false) /\ (z <-> false))) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q ( (btoss_pt y q ({{(prob ((y <-> false) /\ (z <-> false))) = y2 }}))))).
+Lemma y_false_z_false_2 : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t) }}) <{ x toss q; y toss q }> ({{(prob ((y <-> false) /\ (z <-> false))) = y2 }}).
+Proof. intros t Ht. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((y <-> false) /\ (z <-> false))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) ( (btoss_pt y q ltac:(lra) ({{(prob ((y <-> false) /\ (z <-> false))) = y2 }}))))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -903,24 +913,24 @@ Proof. intros q t Ht. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((y <-> fa
         + apply HBToss. 
 Qed.
 
-Lemma y_false_z_false_int : forall (p q t: R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*t)}}) <{if z then x toss p; y toss p
+Lemma y_false_z_false_int : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*t)}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((y <-> false) /\ (z <-> false))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t) }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t) }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose y_false_z_false_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y1) = (fst ps (fun st : state => ((snd st y) <-> False) /\ ((snd st z) <-> False)))) with (fun ps : Pstate =>
    (fst ps (fun st : state => ((snd st y) <-> False) /\ ((snd st z) <-> False))) = (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose y_false_z_false_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) = (fst ps (fun st : state => ((snd st y) <-> False) /\ ((snd st z) <-> False)))) with (fun ps : Pstate =>
    (fst ps (fun st : state => ((snd st y) <-> False) /\ ((snd st z) <-> False))) = (snd ps y2)).
-            apply H with (q := q). apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma y_false_z_false : forall (p q t: R), (t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma y_false_z_false : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{0.5*t = (prob ((y <-> false) /\ (z <-> false))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> False) /\ (~ (snd st z)))) with (fst ps (fun st : state => ((snd st z) <-> False))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto.  
@@ -934,9 +944,9 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false
             * apply eliminate_y. easy. easy. apply y_false_z_false_int. easy.
 Qed.
 
-Lemma x_true_y_true_z_true_1 : forall (p : R), hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p*p) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y1 }}). 
-Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y1 }})))).
+Lemma x_true_y_true_z_true_1 : hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p*p) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y1 }}). 
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -974,9 +984,9 @@ Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((x <-> true) /\
         + apply HBToss. 
 Qed.
 
-Lemma x_true_y_true_z_true_2 : forall (q : R), hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y2 }}). 
-Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y2 }})))).
+Lemma x_true_y_true_z_true_2 : hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y2 }}). 
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1014,9 +1024,9 @@ Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((x <-> true) /\
         + apply HBToss. 
 Qed.
 
-Lemma x_true_y_true_z_true_int : forall (p q : R), hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*p*p)) /\ y2 = 0}}) <{if z then x toss p; y toss p
+Lemma x_true_y_true_z_true_int : hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*p*p)) /\ y2 = 0}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p*p) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
+Proof. idtac. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p*p) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_true_y_true_z_true_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
@@ -1025,19 +1035,19 @@ Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> tru
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> True) /\ ((snd st z) <-> True))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> True) /\ ((snd st z) <-> True)))) = (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_true_y_true_z_true_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) =
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> True) /\ ((snd st z) <-> True))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> True) /\ ((snd st z) <-> True)))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_true_y_true_z_true : forall (p q : R), hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_true_y_true_z_true : hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*p*p) = (prob ((x <-> true) /\ (y <-> true) /\ (z <-> true))) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
+Proof. idtac. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> True) /\ (snd st z))) with (fst ps (fun st : state => ((snd st z) <-> True))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto.
@@ -1051,9 +1061,9 @@ Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z
             * apply eliminate_y. easy. easy. apply x_true_y_true_z_true_int.
 Qed.
 
-Lemma x_true_y_false_z_true_1 : forall (p t : R), (t = (1 - p)%R) -> hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p*t) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y1 }}). 
-Proof. intros p t Ht. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y1 }})))).
+Lemma x_true_y_false_z_true_1 : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p*t) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y1 }}). 
+Proof. intros t Ht. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1091,9 +1101,9 @@ Proof. intros p t Ht. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((x <-> tr
         + apply HBToss. 
 Qed.
 
-Lemma x_true_y_false_z_true_2 : forall (q : R), hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y2 }}). 
-Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y2 }})))).
+Lemma x_true_y_false_z_true_2 : hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y2 }}). 
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1131,9 +1141,9 @@ Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((x <-> true) /\
         + apply HBToss. 
 Qed.
 
-Lemma x_true_y_false_z_true_int : forall (p q t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*p*t)) /\ y2 = 0}}) <{if z then x toss p; y toss p
+Lemma x_true_y_false_z_true_int : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*p*t)) /\ y2 = 0}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p*t) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*p*t) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_true_y_false_z_true_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
@@ -1142,19 +1152,19 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> False) /\ ((snd st z) <-> True))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> False) /\ ((snd st z) <-> True)))) = (snd ps y1)).
-            apply H with (p := p). apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_true_y_false_z_true_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) =
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> False) /\ ((snd st z) <-> True))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> False) /\ ((snd st z) <-> True)))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_true_y_false_z_true : forall (p q t: R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_true_y_false_z_true : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*p*t) = (prob ((x <-> true) /\ (y <-> false) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> True) /\ (snd st z))) with (fst ps (fun st : state => ((snd st z) <-> True))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto.
@@ -1168,9 +1178,9 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true)
             * apply eliminate_y. easy. easy. apply x_true_y_false_z_true_int. easy.
 Qed.
 
-Lemma x_false_y_false_z_true_1 : forall (p t : R), (t = (1 - p)%R) -> hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t*t) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y1 }}). 
-Proof. intros p t Ht. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y1 }})))).
+Lemma x_false_y_false_z_true_1 : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t*t) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y1 }}). 
+Proof. intros t Ht. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1208,9 +1218,9 @@ Proof. intros p t Ht. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((x <-> fa
         + apply HBToss. 
 Qed.
 
-Lemma x_false_y_false_z_true_2 : forall (q : R), hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y2 }}). 
-Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y2 }})))).
+Lemma x_false_y_false_z_true_2 : hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y2 }}). 
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1248,9 +1258,9 @@ Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((x <-> false) /
         + apply HBToss. 
 Qed.
 
-Lemma x_false_y_false_z_true_int : forall (p q t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*t*t)) /\ y2 = 0}}) <{if z then x toss p; y toss p
+Lemma x_false_y_false_z_true_int : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*t*t)) /\ y2 = 0}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t*t) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t*t) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_false_y_false_z_true_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
@@ -1259,19 +1269,19 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> False) /\ ((snd st z) <-> True))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> False) /\ ((snd st z) <-> True)))) = (snd ps y1)).
-            apply H with (p := p). apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_false_y_false_z_true_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) =
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> False) /\ ((snd st z) <-> True))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> False) /\ ((snd st z) <-> True)))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_false_y_false_z_true : forall (p q t: R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_false_y_false_z_true : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*t*t) = (prob ((x <-> false) /\ (y <-> false) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> True) /\ (snd st z))) with (fst ps (fun st : state => ((snd st z) <-> True))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto.
@@ -1285,9 +1295,9 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true)
             * apply eliminate_y. easy. easy. apply x_false_y_false_z_true_int. easy.
 Qed.
 
-Lemma x_false_y_true_z_true_1 : forall (p t : R), (t = (1 - p)%R) -> hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t*p) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y1 }}). 
-Proof. intros p t Ht. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y1 }})))).
+Lemma x_false_y_true_z_true_1 : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t*p) }}) <{ x toss p; y toss p }> ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y1 }}). 
+Proof. intros t Ht. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1325,9 +1335,9 @@ Proof. intros p t Ht. apply HSeq with (eta2 := (btoss_pt y p ({{(prob ((x <-> fa
         + apply HBToss. 
 Qed.
 
-Lemma x_false_y_true_z_true_2 : forall (q : R), hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y2 }}). 
-Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y2 }})))).
+Lemma x_false_y_true_z_true_2 : hoare_triple ({{((prob (z <-> true)) = 0) /\ y2 = (0) }}) <{ x toss q; y toss q }> ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y2 }}). 
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1365,9 +1375,9 @@ Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob ((x <-> false) /
         + apply HBToss. 
 Qed.
 
-Lemma x_false_y_true_z_true_int : forall (p q t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*t*p)) /\ y2 = 0}}) <{if z then x toss p; y toss p
+Lemma x_false_y_true_z_true_int : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) /\ y1 = (0.5*t*p)) /\ y2 = 0}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t*p) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> true)) = 0.5) /\ y1 = (0.5*t*p) }}) ({{((prob (z <-> true)) = 0) /\ y2 = 0 }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_false_y_true_z_true_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
@@ -1376,19 +1386,19 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> True) /\ ((snd st z) <-> True))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> True) /\ ((snd st z) <-> True)))) = (snd ps y1)).
-            apply H with (p := p). apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply Ht. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_false_y_true_z_true_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) =
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> True) /\ ((snd st z) <-> True))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> True) /\ ((snd st z) <-> True)))) = (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_false_y_true_z_true : forall (p q t: R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_false_y_true_z_true : forall (t : R), (t = (1 - p)%R) -> hoare_triple ({{(prob (z <-> true)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*t*p) = (prob ((x <-> false) /\ (y <-> true) /\ (z <-> true))) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true) /\ z)) = 0.5) /\ ((prob ((z <-> true)/\ ~ z)) = 0) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> True) /\ (snd st z))) with (fst ps (fun st : state => ((snd st z) <-> True))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto.
@@ -1402,9 +1412,9 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> true)
             * apply eliminate_y. easy. easy. apply x_false_y_true_z_true_int. easy.
 Qed.
 
-Lemma x_true_y_true_z_false_1 : forall (p : R), hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y1 }})))).
+Lemma x_true_y_true_z_false_1 : hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1442,9 +1452,9 @@ Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob (x <-> true) /\ 
         + apply HBToss. 
 Qed.
 
-Lemma x_true_y_true_z_false_2 : forall (q : R), hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q*q) }}) <{ x toss q; y toss q }> ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y2 }}).
-Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y2 }})))).
+Lemma x_true_y_true_z_false_2 : hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q*q) }}) <{ x toss q; y toss q }> ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y2 }}).
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1482,9 +1492,9 @@ Proof. intro q. apply HSeq with (eta2 := (btoss_pt y q ({{(prob (x <-> true) /\ 
         + apply HBToss. 
 Qed.
 
-Lemma x_true_y_true_z_false_int : forall (p q : R), hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*q*q)}}) <{if z then x toss p; y toss p
+Lemma x_true_y_true_z_false_int : hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*q*q)}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob (x <-> true) /\ (y <-> true) /\ (z <-> false))  }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q*q) }}) (z) )).
+Proof. idtac. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q*q) }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_true_y_true_z_false_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
@@ -1493,19 +1503,19 @@ Proof. intros p q. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> fal
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> True) /\ ((snd st z) <-> False))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> True) /\ ((snd st z) <-> False)))) =    (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_true_y_true_z_false_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) =
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> True) /\ ((snd st z) <-> False))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> True) /\ ((snd st z) <-> False)))) =    (snd ps y2)).
-            apply H with (q := q). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_true_y_true_z_false : forall (p q : R), hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_true_y_true_z_false : hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*q*q) = (prob (x <-> true) /\ (y <-> true) /\ (z <-> false)) }}).
-Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
+Proof. idtac. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> False) /\ (~ (snd st z)))) with (fst ps (fun st : state => ((snd st z) <-> False))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto.  
@@ -1519,9 +1529,9 @@ Proof. intros p q. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ 
             * apply eliminate_y. easy. easy. apply x_true_y_true_z_false_int.
 Qed.
 
-Lemma x_true_y_false_z_false_1 : forall (p : R), hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y1 }})))).
+Lemma x_true_y_false_z_false_1 : hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1559,9 +1569,9 @@ Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob (x <-> true) /\ 
         + apply HBToss. 
 Qed.
 
-Lemma x_true_y_false_z_false_2 : forall (q t: R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q*t) }}) <{ x toss q; y toss q }> ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y2 }}).
-Proof. intros q t Ht. apply HSeq with (eta2 := (btoss_pt y q ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y2 }})))).
+Lemma x_true_y_false_z_false_2 : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q*t) }}) <{ x toss q; y toss q }> ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y2 }}).
+Proof. intros t Ht. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1599,9 +1609,9 @@ Proof. intros q t Ht. apply HSeq with (eta2 := (btoss_pt y q ({{(prob (x <-> tru
         + apply HBToss. 
 Qed.
 
-Lemma x_true_y_false_z_false_int : forall (p q t: R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*q*t)}}) <{if z then x toss p; y toss p
+Lemma x_true_y_false_z_false_int : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*q*t)}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob (x <-> true) /\ (y <-> false) /\ (z <-> false))  }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q*t) }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*q*t) }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_true_y_false_z_false_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
@@ -1610,19 +1620,19 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> False) /\ ((snd st z) <-> False))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> False) /\ ((snd st z) <-> False)))) =    (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_true_y_false_z_false_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) =
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> False) /\ ((snd st z) <-> False))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> True) /\ (((snd st y) <-> False) /\ ((snd st z) <-> False)))) =    (snd ps y2)).
-            apply H with (q := q). easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_true_y_false_z_false : forall (p q t: R),(t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_true_y_false_z_false : forall (t : R),(t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*q*t) = (prob (x <-> true) /\ (y <-> false) /\ (z <-> false)) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> False) /\ (~ (snd st z)))) with (fst ps (fun st : state => ((snd st z) <-> False))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto.  
@@ -1636,9 +1646,9 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false
             * apply eliminate_y. easy. easy. apply x_true_y_false_z_false_int. easy.
 Qed.
 
-Lemma x_false_y_false_z_false_1 : forall (p : R), hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y1 }})))).
+Lemma x_false_y_false_z_false_1 : hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1676,9 +1686,9 @@ Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob (x <-> false) /\
         + apply HBToss. 
 Qed.
 
-Lemma x_false_y_false_z_false_2 : forall (q t: R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t*t) }}) <{ x toss q; y toss q }> ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y2 }}).
-Proof. intros q t Ht. apply HSeq with (eta2 := (btoss_pt y q ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y2 }})))).
+Lemma x_false_y_false_z_false_2 : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t*t) }}) <{ x toss q; y toss q }> ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y2 }}).
+Proof. intros t Ht. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1716,9 +1726,9 @@ Proof. intros q t Ht. apply HSeq with (eta2 := (btoss_pt y q ({{(prob (x <-> fal
         + apply HBToss. 
 Qed.
 
-Lemma x_false_y_false_z_false_int : forall (p q t: R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*t*t)}}) <{if z then x toss p; y toss p
+Lemma x_false_y_false_z_false_int : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*t*t)}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob (x <-> false) /\ (y <-> false) /\ (z <-> false))  }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t*t) }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t*t) }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_false_y_false_z_false_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
@@ -1727,19 +1737,19 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> False) /\ ((snd st z) <-> False))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> False) /\ ((snd st z) <-> False)))) =    (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_false_y_false_z_false_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) =
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> False) /\ ((snd st z) <-> False))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> False) /\ ((snd st z) <-> False)))) =    (snd ps y2)).
-            apply H with (q := q). easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_false_y_false_z_false : forall (p q t: R),(t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_false_y_false_z_false : forall (t : R),(t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*t*t) = (prob (x <-> false) /\ (y <-> false) /\ (z <-> false)) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> False) /\ (~ (snd st z)))) with (fst ps (fun st : state => ((snd st z) <-> False))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto.  
@@ -1753,9 +1763,9 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false
             * apply eliminate_y. easy. easy. apply x_false_y_false_z_false_int. easy.
 Qed.
 
-Lemma x_false_y_true_z_false_1 : forall (p : R), hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y1 }}).
-Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y1 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x p (btoss_pt y p ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y1 }})))).
+Lemma x_false_y_true_z_false_1 : hoare_triple ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) <{ x toss p; y toss p }> ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y1 }}).
+Proof. idtac. apply HSeq with (eta2 := (btoss_pt y p ltac:(lra) ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y1 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x p ltac:(lra) (btoss_pt y p ltac:(lra) ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y1 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1793,9 +1803,9 @@ Proof. intro p. apply HSeq with (eta2 := (btoss_pt y p ({{(prob (x <-> false) /\
         + apply HBToss. 
 Qed.
 
-Lemma x_false_y_true_z_false_2 : forall (q t: R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t*q) }}) <{ x toss q; y toss q }> ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y2 }}).
-Proof. intros q t Ht. apply HSeq with (eta2 := (btoss_pt y q ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y2 }}))).
-        + apply HConseqLeft with (eta2 := (btoss_pt x q (btoss_pt y q ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y2 }})))).
+Lemma x_false_y_true_z_false_2 : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t*q) }}) <{ x toss q; y toss q }> ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y2 }}).
+Proof. intros t Ht. apply HSeq with (eta2 := (btoss_pt y q ltac:(lra) ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y2 }}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt x q ltac:(lra) (btoss_pt y q ltac:(lra) ({{(prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) = y2 }})))).
           - unfold PAImplies. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             intro ps. replace (fst ps
          (fun st : state =>
@@ -1833,9 +1843,9 @@ Proof. intros q t Ht. apply HSeq with (eta2 := (btoss_pt y q ({{(prob (x <-> fal
         + apply HBToss. 
 Qed.
 
-Lemma x_false_y_true_z_false_int : forall (p q t: R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*t*q)}}) <{if z then x toss p; y toss p
+Lemma x_false_y_true_z_false_int : forall (t : R), (t = (1 - q)%R) -> hoare_triple ({{(((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) /\ y1 = 0) /\ y2 = (0.5*t*q)}}) <{if z then x toss p; y toss p
                                                             else x toss q; y toss q end }> ({{y1 + y2 = (prob (x <-> false) /\ (y <-> true) /\ (z <-> false))  }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t*q) }}) (z) )).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-> false)) = 0) /\ y1 = 0 }}) ({{((prob (z <-> false)) = 0.5) /\ y2 = (0.5*t*q) }}) (z) )).
         + unfold PAImplies. intro ps. easy.
         + apply HIfThen.
           - uncoerce_basic. pose x_false_y_true_z_false_1 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
@@ -1844,19 +1854,19 @@ Proof. intros p q t Ht. apply HConseqLeft with (eta2 := (psfBpsf ({{((prob (z <-
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> True) /\ ((snd st z) <-> False))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> True) /\ ((snd st z) <-> False)))) =    (snd ps y1)).
-            apply H with (p := p). apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
           - uncoerce_basic. pose x_false_y_true_z_false_2 as H. uncoerce_basic_H H. replace (fun ps : Pstate =>
    (snd ps y2) =
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> True) /\ ((snd st z) <-> False))))) with (fun ps : Pstate =>
    (fst ps
       (fun st : state => ((snd st x) <-> False) /\ (((snd st y) <-> True) /\ ((snd st z) <-> False)))) =    (snd ps y2)).
-            apply H with (q := q). easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
+            apply H . easy. apply functional_extensionality. intro x0. apply propositional_extensionality. lra.
 Qed.
 
-Lemma x_false_y_true_z_false : forall (p q t: R),(t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
+Lemma x_false_y_true_z_false : forall (t : R),(t = (1 - q)%R) -> hoare_triple ({{(prob (z <-> false)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                       else x toss q; y toss q end }> ({{(0.5*t*q) = (prob (x <-> false) /\ (y <-> true) /\ (z <-> false)) }}).
-Proof. intros p q t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
+Proof. intros t Ht. apply HConseqLeft with (eta2 := ({{ ((prob ((z <-> false) /\ z)) = 0) /\ ((prob ((z <-> false)/\ ~ z)) = 0.5) }})).
         + unfold PAImplies. intro ps. intro H. split. uncoerce_basic. rewrite <- empty_set_measure with (mu := fst ps). apply equivalence. unfold Assertion_equiv. intro st. tauto. 
           uncoerce_basic. replace (fst ps (fun st : state => ((snd st z) <-> False) /\ (~ (snd st z)))) with (fst ps (fun st : state => ((snd st z) <-> False))).
           apply H. apply equivalence. unfold Assertion_equiv. intro st. tauto.  
@@ -1873,9 +1883,9 @@ Qed.
 Definition post_cond (X Y Z : bool) : PAssertion :=
 {{(prob (z <-> Z))*(prob((x <-> X) /\ (y <-> Y) /\ (z <-> Z))) = ((prob((x <-> X) /\ (z <-> Z)))*(prob((y <-> Y) /\ (z <-> Z)))) }}.
 
-Theorem if_then_indep: forall (X Y Z : bool) (p q : R), hoare_triple ({{(prob (z <-> Z)) = 0.5 }}) <{if z then x toss p; y toss p
+Theorem if_then_indep: forall (X Y Z : bool), hoare_triple ({{(prob (z <-> Z)) = 0.5 }}) <{if z then x toss p; y toss p
                                                                                         else x toss q; y toss q end }> (post_cond X Y Z).
-Proof. intros X Y Z p q. destruct X.
+Proof. intros X Y Z. destruct X.
         + destruct Y.
           - destruct Z.
             * unfold post_cond. uncoerce_basic. apply HConseqRight with (eta2:= {{(0.5 = (prob (z <-> true)) ) /\ ((0.5*p*p) = (prob ((x <-> true) /\ (y <-> true) /\ (z <-> true)))) /\ ((0.5*p) = (prob ((x <-> true) /\ (z <-> true)))) /\ ((0.5*p) = (prob ((y <-> true) /\ (z <-> true))))}}).
@@ -1917,7 +1927,7 @@ Proof. intros X Y Z p q. destruct X.
 Qed. 
 
 Lemma toss_stmt : forall (Z : bool), hoare_triple ({{ (prob (true)) = 1  }}) <{ z toss 0.5 }> ({{ (prob (z <-> Z)) = 0.5 }}).
-Proof. intro. apply HConseqLeft with (eta2 := (btoss_pt z (0.5%R) ({{ (prob (z <-> Z)) = 0.5 }}))).
+Proof. intro. apply HConseqLeft with (eta2 := (btoss_pt z (0.5%R) ltac:(lra) ({{ (prob (z <-> Z)) = 0.5 }}))).
         + unfold PAImplies. intro ps. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
           destruct Z.
           - replace (fst ps (fun st : state => ((z !-> True; (snd st)) z) <-> True)) with (fst ps (fun st : state => True)).
@@ -1933,10 +1943,12 @@ Proof. intro. apply HConseqLeft with (eta2 := (btoss_pt z (0.5%R) ({{ (prob (z <
         + apply HBToss.
 Qed.
 
-Theorem cond_indep: forall (X Y Z : bool) (p q : R), hoare_triple ({{ (prob (true)) = 1  }}) (CondSamples p q) (post_cond X Y Z).
-Proof. intros X Y Z p q. apply HSeq with (eta2 := ({{ (prob (z <-> Z)) = 0.5 }})). apply toss_stmt. apply if_then_indep. Qed.
+Theorem cond_indep: forall (X Y Z : bool), hoare_triple ({{ (prob (true)) = 1  }}) CondSamples (post_cond X Y Z).
+Proof. intros X Y Z. apply HSeq with (eta2 := ({{ (prob (z <-> Z)) = 0.5 }})). apply toss_stmt. apply if_then_indep. Qed.
 
 
 
+
+End RateBounds.
 
 End CondSamples.

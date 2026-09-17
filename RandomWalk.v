@@ -197,7 +197,7 @@ Theorem bodyvoid : forall (k k1: nat), (k > 0) -> (k1 <> (k - 1)%nat) -> (k1 <> 
 }>
                     {{0 = (prob (x = k1)) }}.
 Proof. intros. apply HSeq with (eta2 := {{(prob (x = k)) = (prob true)}}).
-        + apply HConseqLeft with (eta2 := btoss_pt b 0.25%R ({{(prob (x = k)) = (prob true)}})).
+        + apply HConseqLeft with (eta2 := btoss_pt b 0.25%R ltac:(lra) ({{(prob (x = k)) = (prob true)}})).
           * intro. uncoerce_basic. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. simpl. replace (fst ps (fun st : state => k = (fst st x))) with (fst ps (fun st : state => (fst st x) = k)). lra.
             apply equivalence. easy.
           * apply HBToss.
@@ -226,7 +226,7 @@ Theorem body0 : forall (k : nat),
 }>
                 {{ 0.25 = (prob (x = (k + 1))) }}.
 Proof. intros. apply HSeq with (eta2 := ({{(((prob (x = k /\ b)) = 0.25 /\ (prob (x = k /\ b)) = (prob b) ) /\ ((prob (x = k /\ ~b)) = 0.75 /\ (prob (x = k /\ ~b)) = (prob ~b) )) }})).
-        + apply HConseqLeft with (eta2 := btoss_pt b 0.25%R ({{(((prob (x = k /\ b)) = 0.25 /\ (prob (x = k /\ b)) = (prob b) ) /\ ((prob (x = k /\ ~b)) = 0.75 /\ (prob (x = k /\ ~b)) = (prob ~b) )) }})).
+        + apply HConseqLeft with (eta2 := btoss_pt b 0.25%R ltac:(lra) ({{(((prob (x = k /\ b)) = 0.25 /\ (prob (x = k /\ b)) = (prob b) ) /\ ((prob (x = k /\ ~b)) = 0.75 /\ (prob (x = k /\ ~b)) = (prob ~b) )) }})).
           * intro. uncoerce_basic. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. simpl.
             replace (fst ps (fun st : state => (k = (fst st x)) /\ ((b !-> True; (snd st)) b))) with (fst ps (fun st : state => (k = (fst st x)))).
             replace (fst ps (fun st : state => (k = (fst st x)) /\ ((b !-> False; (snd st)) b))) with (fst ps (fun st : state => False)).
@@ -252,7 +252,7 @@ Theorem body1 : forall (k : nat), k > 0 ->
 }>
      (fun ps :Pstate => (0.75)%R = (fst ps (fun st : state => ((k - 1) = fst st x)%nat) )).
 Proof. intros. apply HSeq with (eta2 := ({{(((prob (x = k /\ b)) = 0.25 /\ (prob (x = k /\ b)) = (prob b) ) /\ ((prob (x = k /\ ~b)) = 0.75 /\ (prob (x = k /\ ~b)) = (prob ~b) )) }})).
-       + apply HConseqLeft with (eta2 := btoss_pt b 0.25%R ({{(((prob (x = k /\ b)) = 0.25 /\ (prob (x = k /\ b)) = (prob b) ) /\ ((prob (x = k /\ ~b)) = 0.75 /\ (prob (x = k /\ ~b)) = (prob ~b) )) }})).
+       + apply HConseqLeft with (eta2 := btoss_pt b 0.25%R ltac:(lra) ({{(((prob (x = k /\ b)) = 0.25 /\ (prob (x = k /\ b)) = (prob b) ) /\ ((prob (x = k /\ ~b)) = 0.75 /\ (prob (x = k /\ ~b)) = (prob ~b) )) }})).
           * intro. uncoerce_basic. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. simpl.
             replace (fst ps (fun st : state => (k = (fst st x)) /\ ((b !-> True; (snd st)) b))) with (fst ps (fun st : state => (k = (fst st x)))).
             replace (fst ps (fun st : state => (k = (fst st x)) /\ ((b !-> False; (snd st)) b))) with (fst ps (fun st : state => False)).

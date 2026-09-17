@@ -34,7 +34,7 @@ Definition OneTimePad : Cmd :=
 
 Theorem OTP_Input_Indep : forall x y : bool, hoare_triple ({{(prob true) = 1}}) OneTimePad ({{(prob ((c <-> x) /\ (m <-> y))) = ((prob (c <-> x))*(prob (m <-> y)))}}).
 Proof. intros x y. apply HSeq with (eta2 := ({{(prob ((((m /\ ~ b) \/ (~ m /\ b)) <-> x) /\ (m <-> y))) = ((prob (((m /\ ~ b) \/ (~ m /\ b)) <-> x))*(prob (m <-> y)))}})).
-        + apply HConseqLeft with (eta2 := (btoss_pt (b) (0.5%R) ({{(prob ((((m /\ ~ b) \/ (~ m /\ b)) <-> x) /\ (m <-> y))) = ((prob (((m /\ ~ b) \/ (~ m /\ b)) <-> x))*(prob (m <-> y)))}}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt (b) (0.5%R) ltac:(lra) ({{(prob ((((m /\ ~ b) \/ (~ m /\ b)) <-> x) /\ (m <-> y))) = ((prob (((m /\ ~ b) \/ (~ m /\ b)) <-> x))*(prob (m <-> y)))}}))).
           - uncoerce_basic. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
               replace (fun st : state =>
             (((((b !-> False; (snd st)) m) /\ (~ ((b !-> False; (snd st)) b))) \/
@@ -148,7 +148,7 @@ Lemma second_bit : forall x1 x2 y1 y2 : bool, hoare_triple ({{(prob ((c1 <-> x1)
     (<{ b toss 0.5;
         c2 b= ((m2 /\ ~ b) \/ (~ m2 /\ b)) }>) ({{(prob ((c1 <-> x1) /\ (c2 <-> x2) /\ (m1 <-> y1) /\ (m2 <-> y2))) = ((prob ((c1 <-> x1) /\ (c2 <-> x2)))*(prob ((m1 <-> y1) /\ (m2 <-> y2))))}}).
 Proof. intros x1 x2 y1 y2. apply HSeq with (eta2 := ({{(prob ((c1 <-> x1) /\ (((m2 /\ ~ b) \/ (~ m2 /\ b)) <-> x2) /\ (m1 <-> y1) /\ (m2 <-> y2))) = ((prob ((c1 <-> x1) /\ (((m2 /\ ~ b) \/ (~ m2 /\ b)) <-> x2)))*(prob ((m1 <-> y1) /\ (m2 <-> y2))))}})).
-        + apply HConseqLeft with (eta2 := (btoss_pt (b) (0.5%R) ({{(prob ((c1 <-> x1) /\ (((m2 /\ ~ b) \/ (~ m2 /\ b)) <-> x2) /\ (m1 <-> y1) /\ (m2 <-> y2))) = ((prob ((c1 <-> x1) /\ (((m2 /\ ~ b) \/ (~ m2 /\ b)) <-> x2)))*(prob ((m1 <-> y1) /\ (m2 <-> y2))))}}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt (b) (0.5%R) ltac:(lra) ({{(prob ((c1 <-> x1) /\ (((m2 /\ ~ b) \/ (~ m2 /\ b)) <-> x2) /\ (m1 <-> y1) /\ (m2 <-> y2))) = ((prob ((c1 <-> x1) /\ (((m2 /\ ~ b) \/ (~ m2 /\ b)) <-> x2)))*(prob ((m1 <-> y1) /\ (m2 <-> y2))))}}))).
           - uncoerce_basic. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. unfold PAImplies. intro ps.
               replace (fst ps
          (fun st : state =>
@@ -282,7 +282,7 @@ Lemma first_bit : forall x1 x2 y1 y2 : bool, hoare_triple ({{(prob true) = 1}}) 
   b toss 0.5;
   c1 b= ((m1 /\ ~ b) \/ (~ m1 /\ b))}> ({{(prob ((c1 <-> x1) /\ (m1 <-> y1) /\ (m2 <-> y2))) = ((prob (c1 <-> x1))*(prob ((m1 <-> y1) /\ (m2 <-> y2)))) }}).
 Proof. intros x1 x2 y1 y2. apply HSeq with (eta2 := ({{(prob ((((m1 /\ ~ b) \/ (~ m1 /\ b)) <-> x1) /\ (m1 <-> y1) /\ (m2 <-> y2))) = ((prob (((m1 /\ ~ b) \/ (~ m1 /\ b)) <-> x1))*(prob ((m1 <-> y1) /\ (m2 <-> y2))))}})).
-        + apply HConseqLeft with (eta2 := (btoss_pt (b) (0.5%R) ({{(prob ((((m1 /\ ~ b) \/ (~ m1 /\ b)) <-> x1) /\ (m1 <-> y1) /\ (m2 <-> y2))) = ((prob (((m1 /\ ~ b) \/ (~ m1 /\ b)) <-> x1))*(prob ((m1 <-> y1) /\ (m2 <-> y2))))}}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt (b) (0.5%R) ltac:(lra) ({{(prob ((((m1 /\ ~ b) \/ (~ m1 /\ b)) <-> x1) /\ (m1 <-> y1) /\ (m2 <-> y2))) = ((prob (((m1 /\ ~ b) \/ (~ m1 /\ b)) <-> x1))*(prob ((m1 <-> y1) /\ (m2 <-> y2))))}}))).
           - uncoerce_basic. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. unfold PAImplies. intro ps. intro H.
               replace (fst ps
       (fun st : state =>

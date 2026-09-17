@@ -134,12 +134,15 @@ eapply HConseqLeft with (eta2 :=
  = ( ((hf * (prob (k1 /\ k3))) + (hf * (prob ((x <-> k1) /\ (~k3))))) * ((hf * (prob (k2 /\ k3))) + (fth * (prob (~k3))))) 
 }}).
 
--- eapply HConseqLeft with (eta2 := (btoss_pt x ((1/2)%R) {{
+-- eapply HConseqLeft with (eta2 := (btoss_pt x ((1/2)%R) ltac:(lra) {{
  (((hf * (prob (k1 /\ k2 /\ k3))) + (fth * (prob (((x <-> k1) /\ (~k3))))) ) * (hf * (prob true)))
  = ( ((hf * (prob (k1 /\ k3))) + (hf * (prob ((x <-> k1) /\ (~k3))))) * ((hf * (prob (k2 /\ k3))) + (fth * (prob (~k3))))) 
 }})).
   * unfold hf. unfold fth. unfold eth. unfold PAImplies. unfold PTerm_of_R. unfold CBoolexp_of_bexp. unfold Beval. unfold Pteval.
-   intros. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. unfold Pteval.
+   (* [MEASURE-FIX] reduce the transformer via its application lemma
+      before touching the arithmetic. *)
+   intros. unfold btoss_pt. simpl.
+   try unfold measure_sub_bexp. try unfold assertion_sub_bexp. try unfold Pteval.
     replace (1-1/2)%R with (1/2)%R by lra. simpl. unfold t_update. simpl.
     replace (1 / 2 *
    fst ps
@@ -169,12 +172,15 @@ eapply HConseqLeft with (eta2 :=
        (((hf * (prob (k1 /\ k2 /\ k3))) + (hf * (prob ( (x <-> k1) /\ (y <-> k2) /\ (~k3))))) * (hf * (prob true))) 
      = ( ((hf * (prob (k1 /\ k3))) + (hf * (prob ((x <-> k1) /\ (~k3))))) * ((hf * (prob (k2 /\ k3))) + (hf * (prob ((y <-> k2) /\ (~k3))))) )
 }}).
- --- eapply HConseqLeft with (eta2 := (btoss_pt y ((1/2)%R) {{
+ --- eapply HConseqLeft with (eta2 := (btoss_pt y ((1/2)%R) ltac:(lra) {{
        (((hf * (prob (k1 /\ k2 /\ k3))) + (hf * (prob ( (x <-> k1) /\ (y <-> k2) /\ (~k3))))) * (hf * (prob true))) 
      = ( ((hf * (prob (k1 /\ k3))) + (hf * (prob ((x <-> k1) /\ (~k3))))) * ((hf * (prob (k2 /\ k3))) + (hf * (prob ((y <-> k2) /\ (~k3))))) )
 }})).
   * unfold hf. unfold fth. unfold PAImplies. unfold PTerm_of_R. unfold CBoolexp_of_bexp. unfold Beval. unfold Pteval.
-   intros. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. unfold Pteval.
+   (* [MEASURE-FIX] reduce the transformer via its application lemma
+      before touching the arithmetic. *)
+   intros. unfold btoss_pt. simpl.
+   try unfold measure_sub_bexp. try unfold assertion_sub_bexp. try unfold Pteval.
     replace (1-1/2)%R with (1/2)%R by lra. simpl. unfold t_update. simpl.
     replace (1/2 * (1 / 2 *
    fst ps
@@ -239,9 +245,11 @@ eapply HConseqLeft with (eta2 :=
   --- eapply HSeq with (eta2 := 
    {{ ((prob (( (x \/ z) <-> k1) /\ ( (y \/ z) <-> k2) /\ (z <-> k3))) * (prob (z <-> k3))) 
    = ((prob (((x \/ z) <-> k1) /\ (z <-> k3)))* (prob (((y \/ z) <-> k2) /\ (z <-> k3)))) }}).
-   ------ eapply HConseqLeft with (eta2 := (btoss_pt z ((1/2)%R)  {{ ((prob (( (x \/ z) <-> k1) /\ ( (y \/ z) <-> k2) /\ (z <-> k3))) * (prob (z <-> k3))) 
+   ------ eapply HConseqLeft with (eta2 := (btoss_pt z ((1/2)%R) ltac:(lra)  {{ ((prob (( (x \/ z) <-> k1) /\ ( (y \/ z) <-> k2) /\ (z <-> k3))) * (prob (z <-> k3))) 
    = ((prob (((x \/ z) <-> k1) /\ (z <-> k3)))* (prob (((y \/ z) <-> k2) /\ (z <-> k3)))) }})).
-     * unfold PAImplies. intros. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. unfold Pteval.
+     (* [MEASURE-FIX] reduce the transformer before touching arithmetic. *)
+     * unfold PAImplies. intros. unfold btoss_pt. simpl.
+       try unfold measure_sub_bexp. try unfold assertion_sub_bexp. try unfold Pteval.
        replace (1-1/2)%R with (1/2)%R by lra. simpl. unfold hf in H. 
        replace     (fun st : state =>
      ((z !-> True; snd st) x \/ (z !-> True; snd st) z <->

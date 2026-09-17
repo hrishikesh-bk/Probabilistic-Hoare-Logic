@@ -40,7 +40,7 @@ Theorem Rsampling_body : hoare_triple ({{ ((prob (b0 /\ b1)) = 1) /\ (prob (b0 /
                             (<{ b0 toss 0.5; b1 toss 0.5 }>)
                             ({{ (prob (b0 /\ b1)) = 0.25 /\ (prob (~ (b0 /\ b1) /\ (b0 /\ ~ b1))) = 0.25 }}).
 Proof. apply HSeq with (eta2 := ({{(prob b0) = 0.5}})).
-          * apply HConseqLeft with (eta2 := btoss_pt b0 0.5 ({{(prob b0) = 0.5}})).
+          * apply HConseqLeft with (eta2 := btoss_pt b0 0.5 ltac:(lra) ({{(prob b0) = 0.5}})).
             - intro. unfold btoss_pt. uncoerce_basic. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp.
               unfold Beval. replace (fst ps (fun st : state => CBoolexp_of_bexp (BVar b0) (fst st, b0 !-> True; (snd st)))) with (fst ps (fun st : state => True)). 
               replace (fst ps (fun st : state => CBoolexp_of_bexp (BVar b0) (fst st, b0 !-> False; (snd st)))) with (fst ps (fun st : state => False)).
@@ -49,7 +49,7 @@ Proof. apply HSeq with (eta2 := ({{(prob b0) = 0.5}})).
               apply equivalence. intro. unfold CBoolexp_of_bexp. unfold Beval. simpl. rewrite t_update_eq. tauto.
             - apply HBToss.
           * apply HAnd.
-            + apply HConseqLeft with (eta2 := btoss_pt b1 0.5 ({{ (prob (b0 /\ b1)) = 0.25}})).
+            + apply HConseqLeft with (eta2 := btoss_pt b1 0.5 ltac:(lra) ({{ (prob (b0 /\ b1)) = 0.25}})).
               - intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp.
                 unfold Beval. unfold Pteval. simpl. intro. uncoerce_basic.
                 replace (fst ps (fun st : state => ((b1 !-> True; (snd st)) b0) /\ ((b1 !-> True; (snd st)) b1))) with (fst ps (fun st : state => snd st b0)).
@@ -60,7 +60,7 @@ Proof. apply HSeq with (eta2 := ({{(prob b0) = 0.5}})).
             + apply HConseqRight with (eta2 := ({{ (prob (b0 /\ ~ b1)) = 0.25 }})).
               - uncoerce_basic. intro. replace (fst ps (fun st : state => (~ ((snd st b0) /\ (snd st b1))) /\ ((snd st b0) /\ (~ (snd st b1))))) with (fst ps (fun st : state => (snd st b0) /\ (~ (snd st b1)))).
                 easy. apply equivalence. easy.
-              - apply HConseqLeft with (eta2 := btoss_pt b1 0.5 ({{ (prob (b0 /\ ~ b1)) = 0.25 }})).
+              - apply HConseqLeft with (eta2 := btoss_pt b1 0.5 ltac:(lra) ({{ (prob (b0 /\ ~ b1)) = 0.25 }})).
                 -- intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp.
                 unfold Beval. unfold Pteval. simpl. intro. uncoerce_basic.
                 replace (fst ps (fun st : state => ((b1 !-> True; (snd st)) b0) /\ (~ ((b1 !-> True; (snd st)) b1)))) with (fst ps (fun st : state => False)).

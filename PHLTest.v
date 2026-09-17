@@ -191,16 +191,55 @@ Notation "P [ X 'b->' a ]" := (assertion_sub_bexp X a P)
 
 (* Defining a "measure". *)
 
-Definition Measure : Type := Assertion -> R.
+(* [MEASURE-FIX] ===================================================
+   WAS:
+     Definition Measure : Type := Assertion -> R.
+     Axiom empty_set_measure : forall mu : Measure, mu (fun _ => False) = 0%R.
+     Axiom equivalence : forall (mu : Measure) (P Q : Assertion),
+                     (Assertion_equiv P Q) -> (mu P = mu Q).
+     Axiom fin_additivity : forall (mu : Measure) (P Q : Assertion),
+         (forall st : state, ~ (P st /\ Q st)) ->
+           ((mu P) + (mu Q))%R = (mu (fun st : state => P st \/ Q st)).
+     Axiom positive : forall (mu : Measure) (P : Assertion), (mu P >= 0)%R.
 
-(* Axioms for measures *)
-Axiom empty_set_measure : forall mu : Measure, mu (fun _ => False) = 0%R.
-Axiom equivalence: forall (mu : Measure) (P Q : Assertion), 
+   WHY: [Measure] as a plain definition is inhabited by EVERY function
+   Assertion -> R, so those axioms asserted that every such function is a
+   measure.  Three of them are refutable at a non-measure:
+     empty_set_measure  at  mu := fun _ => 1              gives  1 = 0
+     positive           at  mu := fun _ => -1             gives  -1 >= 0
+     fin_additivity     at  mu := fun _ => 1, P = Q = ff  gives  1+1 = 1
+   [False] was derivable, and with it EVERY Hoare triple -- including
+   {{prob (x=1) = 1}} x := 2 {{prob (x=1) = 1}}.
+
+   FIX: bundle the properties into the type, so [mu] ranges over exactly
+   the functionals that really are measures.  The projections below have
+   the SAME shape as the old axioms, so proof scripts are unaffected.
+   [equivalence] was sound but redundant -- funext + propext give it -- so
+   it is now a theorem.
+   ================================================================== *)
+Record Measure : Type := mkMeasure {
+  Mval :> Assertion -> R ;
+  empty_set_measure_ : Mval (fun _ => False) = 0%R ;
+  fin_additivity_ : forall (P Q : Assertion),
+    (forall st : state, ~ (P st /\ Q st)) ->
+      ((Mval P) + (Mval Q))%R = (Mval (fun st : state => P st \/ Q st)) ;
+  positive_ : forall (P : Assertion), (Mval P >= 0)%R
+}.
+
+(* [MEASURE-FIX] Record projections auto-name their argument [m]; these
+   wrappers restore the original names AND the binder name [mu], so
+   existing [... with (mu := ...)] invocations keep working. *)
+Definition empty_set_measure (mu : Measure) := empty_set_measure_ mu.
+Definition fin_additivity (mu : Measure) (P Q : Assertion) := fin_additivity_ mu P Q.
+Definition positive (mu : Measure) (P : Assertion) := positive_ mu P.
+
+(* [MEASURE-FIX] formerly an axiom, now provable. *)
+Theorem equivalence: forall (mu : Measure) (P Q : Assertion),
                 (Assertion_equiv P Q) -> (mu P = mu Q).
-Axiom fin_additivity: forall (mu : Measure) (P Q : Assertion), 
-    (forall st : state, ~ (P st /\ Q st)) -> 
-      ((mu P) + (mu Q))%R = (mu (fun st : state => P st \/ Q st)).
-Axiom positive : forall (mu : Measure) (P : Assertion), (mu P >= 0)%R.
+Proof.
+  intros. f_equal. apply functional_extensionality. intros.
+  apply propositional_extensionality. apply H.
+Qed.
 
 (* --------Properties of Measures that follow from the axioms------------ *)
 Theorem measure_inclusion: forall (mu : Measure) (P Q :Assertion), (forall st : state, P st -> Q st) -> ((mu P) <= (mu Q))%R.
@@ -373,9 +412,14 @@ Check {{(prob true) = 1}}.
 
 (* measure_sub_term x e mu = [x : = e] mu i.e. the measure obtained after transforming mu by x : = e
  *)
-Definition measure_sub_term (x : string) (e : Term) (mu : Measure) : Measure :=
-  fun (A : Assertion) => 
-    (mu (assertion_sub_term x e A)).
+(* [MEASURE-FIX] must now be proved to BE a measure (was a bare function). *)
+Definition measure_sub_term (x : string) (e : Term) (mu : Measure) : Measure.
+Proof.
+  refine (mkMeasure (fun (A : Assertion) => mu (assertion_sub_term x e A)) _ _ _).
+  - apply empty_set_measure.
+  - intros P Q Hd. apply fin_additivity. intros st. apply Hd.
+  - intros. apply positive.
+Defined.
 
 (* tasgn_pt x e eta = {set of all measures mu such that [x : = e]mu \models eta}
      tasgn rule : {tasgn_pt x e eta}[x := e]{eta}
@@ -386,9 +430,14 @@ Definition tasgn_pt (x : string) (e : Term) (eta : PAssertion) : PAssertion :=
 
 (* measure_sub_bexp x b mu = [x : = b] mu i.e. the measure obtained after transforming mu by x : = e
  *)
-Definition measure_sub_bexp (x : string) (b : bexp) (mu : Measure) : Measure :=
-  fun (A : Assertion) => 
-    (mu (assertion_sub_bexp x b A)).
+(* [MEASURE-FIX] must now be proved to BE a measure (was a bare function). *)
+Definition measure_sub_bexp (x : string) (b : bexp) (mu : Measure) : Measure.
+Proof.
+  refine (mkMeasure (fun (A : Assertion) => mu (assertion_sub_bexp x b A)) _ _ _).
+  - apply empty_set_measure.
+  - intros P Q Hd. apply fin_additivity. intros st. apply Hd.
+  - intros. apply positive.
+Defined.
 
 (* basgn_pt x b eta = {set of all measures mu such that [x : = b]mu \models eta}
     basgn rule : {basgn_pt x b eta}[x := b]{eta}
@@ -405,6 +454,18 @@ Notation "P [[ X 'b->' a ]]" := (basgn_pt X a P)
                               (in custom passn at level 10, left associativity, P custom passn, X global, a custom com) : passertion_scope.
 
 
+
+(* [MEASURE-FIX] The measure transformers are now record literals, so
+   [unfold] no longer exposes the underlying function to syntactic tactics
+   such as [replace].  These reduce the application back to the shape the
+   original definitions had; all hold by [reflexivity]. *)
+Lemma measure_sub_term_app : forall x e mu A,
+  measure_sub_term x e mu A = mu (assertion_sub_term x e A).
+Proof. reflexivity. Qed.
+
+Lemma measure_sub_bexp_app : forall x b mu A,
+  measure_sub_bexp x b mu A = mu (assertion_sub_bexp x b A).
+Proof. reflexivity. Qed.
 
 (* -------------------------------------------------------
  *)
@@ -424,14 +485,40 @@ Definition probability_measures : PAssertion :=
 (* measure_sub_toss x r mu = [toss(x,r)]mu 
  *)
 
-Definition measure_sub_btoss (x : string) (r : R) (mu : Measure) : Measure :=
-  fun P =>( (r * ((measure_sub_bexp x <{true}> mu) P))%R + ((1 - r)%R * ((measure_sub_bexp x <{false}> mu) P))%R )%R.
+(* [MEASURE-FIX] A toss rate outside [0,1] does not define a measure:
+   [r * mu P + (1-r) * mu (~P)] is then not positive.  [BToss x r] accepts
+   any real, so the bound must be supplied explicitly.  The arithmetic is
+   otherwise unchanged, so existing proof scripts are unaffected. *)
+Definition measure_sub_btoss (x : string) (r : R) (Hr : (0 <= r <= 1)%R) (mu : Measure) : Measure.
+Proof.
+  refine (mkMeasure (fun P => ( (r * ((measure_sub_bexp x <{true}> mu) P))%R
+                              + ((1 - r)%R * ((measure_sub_bexp x <{false}> mu) P))%R )%R) _ _ _).
+  - rewrite (empty_set_measure (measure_sub_bexp x <{true}> mu)).
+    rewrite (empty_set_measure (measure_sub_bexp x <{false}> mu)). ring.
+  - intros P Q Hd.
+    rewrite <- (fin_additivity (measure_sub_bexp x <{true}> mu) P Q Hd).
+    rewrite <- (fin_additivity (measure_sub_bexp x <{false}> mu) P Q Hd). ring.
+  - intros P. destruct Hr as [Hr0 Hr1].
+    pose proof (Rge_le _ _ (positive (measure_sub_bexp x <{true}> mu) P)).
+    pose proof (Rge_le _ _ (positive (measure_sub_bexp x <{false}> mu) P)). nra.
+Defined.
+
+(* [MEASURE-FIX] see the note on measure_sub_term_app.  Proofs must use
+   this instead of [unfold measure_sub_btoss]: unfolding exposes a record
+   literal whose dependent proof fields also mention the arithmetic, so
+   [replace]/[rewrite] on that arithmetic cannot build a well-typed motive. *)
+Lemma measure_sub_btoss_app : forall x r Hr mu P,
+  measure_sub_btoss x r Hr mu P
+    = ((r * ((measure_sub_bexp x <{true}> mu) P))
+       + ((1 - r) * ((measure_sub_bexp x <{false}> mu) P)))%R.
+Proof. reflexivity. Qed.
 
 (* btoss_pt x r eta = {set of all measures mu such that [toss(x,r)]mu \models eta
  *)
-Definition btoss_pt (x : string) (r : R) (eta: PAssertion) : PAssertion :=
+(* [MEASURE-FIX] carries the bound on the toss rate. *)
+Definition btoss_pt (x : string) (r : R) (Hr : (0 <= r <= 1)%R) (eta: PAssertion) : PAssertion :=
   fun ps =>
-    (eta (measure_sub_btoss x r (fst ps), snd ps)).
+    (eta (measure_sub_btoss x r Hr (fst ps), snd ps)).
 
 (* --------------------------------------------------------
  *)
@@ -451,8 +538,22 @@ Definition PAImplies (eta1 : PAssertion) (eta2 : PAssertion) : Prop :=
  *)
 (* Given measure mu and guard B, Measure_cond_B mu B = mu/B
  *)
-Definition Measure_cond_B (mu : Measure) (B : bexp) : Measure :=
-  fun P : Assertion => mu (fun st => (P st) /\ (Beval B st)).
+(* [MEASURE-FIX] must now be proved to BE a measure (was a bare function). *)
+Definition Measure_cond_B (mu : Measure) (B : bexp) : Measure.
+Proof.
+  refine (mkMeasure (fun P : Assertion => mu (fun st => (P st) /\ (Beval B st))) _ _ _).
+  - rewrite <- (empty_set_measure mu). apply equivalence. intro. tauto.
+  - intros P Q Hd.
+    rewrite (fin_additivity mu (fun st => P st /\ Beval B st) (fun st => Q st /\ Beval B st)).
+    + apply equivalence. intro. tauto.
+    + intros st. specialize (Hd st). tauto.
+  - intros. apply positive.
+Defined.
+
+(* [MEASURE-FIX] see the note on measure_sub_term_app. *)
+Lemma Measure_cond_B_app : forall mu B P,
+  Measure_cond_B mu B P = mu (fun st => (P st) /\ (Beval B st)).
+Proof. reflexivity. Qed.
 
 (* Given psf eta and guard B, PAcondB eta B = eta/B
  *)
@@ -756,8 +857,56 @@ match k with
 end.
 
 
-Definition measure_sub_kroll (x: string) (k : nat) (mu : Measure) : Measure :=
-( fun P => ((1/(INR (k + 1))) * (measure_sub_kroll_P  x k mu P))%R). (* 0 to K *)
+(* [MEASURE-FIX] three lemmas by induction on k, needed to show the
+   uniform roll transformer is a measure. *)
+Lemma kroll_P_empty : forall (x : string) (k : nat) (mu : Measure),
+  measure_sub_kroll_P x k mu (fun _ => False) = 0%R.
+Proof.
+  intros.
+  assert (Hz : forall j : nat, mu (measure_sub_k x j (fun _ : state => False)) = 0%R).
+  { intros. apply empty_set_measure. }
+  induction k.
+  - simpl. apply Hz.
+  - simpl. rewrite IHk. rewrite Hz. lra.
+Qed.
+
+Lemma kroll_P_add : forall (x : string) (k : nat) (mu : Measure) (P Q : Assertion),
+  (forall st, ~ (P st /\ Q st)) ->
+  ((measure_sub_kroll_P x k mu P) + (measure_sub_kroll_P x k mu Q))%R
+    = measure_sub_kroll_P x k mu (fun st => P st \/ Q st).
+Proof.
+  intros x k mu P Q Hd.
+  assert (Ha : forall j : nat,
+    ((mu (measure_sub_k x j P)) + (mu (measure_sub_k x j Q)))%R
+      = mu (measure_sub_k x j (fun st => P st \/ Q st))).
+  { intros. apply fin_additivity. intros st. apply Hd. }
+  induction k.
+  - simpl. apply Ha.
+  - simpl. rewrite <- IHk. rewrite <- Ha. lra.
+Qed.
+
+Lemma kroll_P_pos : forall (x : string) (k : nat) (mu : Measure) (P : Assertion),
+  (0 <= measure_sub_kroll_P x k mu P)%R.
+Proof.
+  intros.
+  assert (Hp : forall j : nat, (0 <= mu (measure_sub_k x j P))%R).
+  { intros. apply Rge_le. apply positive. }
+  induction k.
+  - simpl. apply Hp.
+  - simpl. pose proof (Hp (S k)). lra.
+Qed.
+
+(* [MEASURE-FIX] must now be proved to BE a measure (was a bare function). *)
+Definition measure_sub_kroll (x: string) (k : nat) (mu : Measure) : Measure. (* 0 to K *)
+Proof.
+  refine (mkMeasure (fun P => ((1/(INR (k + 1))) * (measure_sub_kroll_P x k mu P))%R) _ _ _).
+  - rewrite kroll_P_empty. lra.
+  - intros P Q Hd. rewrite <- (kroll_P_add x k mu P Q Hd). lra.
+  - intros P. apply Rle_ge. apply Rmult_le_pos.
+    + unfold Rdiv. rewrite Rmult_1_l. apply Rlt_le. apply Rinv_0_lt_compat.
+      apply lt_0_INR. lia.
+    + apply kroll_P_pos.
+Defined.
 
 Definition kroll_pt (x : string) (k : nat) (eta : PAssertion) : PAssertion :=
   fun ps =>
@@ -769,13 +918,16 @@ Definition kroll_pt (x : string) (k : nat) (eta : PAssertion) : PAssertion :=
  *)
 Inductive hoare_triple : PAssertion -> Cmd -> PAssertion -> Prop :=
   | HSkip :
-    forall (eta : PAssertion) (c : Cmd), hoare_triple eta c eta
+    (* [MEASURE-FIX] dropped the now-unused (c : Cmd) binder: with the
+       conclusion fixed to [Skip], [c] no longer occurs in it, so
+       [apply HSkip] left an unresolved goal of type Cmd. *)
+    forall (eta : PAssertion), hoare_triple eta Skip eta
   | HTAsgn : 
      forall (eta: PAssertion) (x : string) (e : Term), hoare_triple (tasgn_pt x e eta) (TAsgn x e) eta
   | HBAsgn : 
     forall (eta: PAssertion) (x : string) (b : bexp), hoare_triple (basgn_pt x b eta) (BAsgn x b) eta
   | HBToss :
-    forall (eta: PAssertion) (x : string) (r : R), hoare_triple (btoss_pt x r eta) (BToss x r) eta
+    (* [MEASURE-FIX] *) forall (eta: PAssertion) (x : string) (r : R) (Hr : (0 <= r <= 1)%R), hoare_triple (btoss_pt x r Hr eta) (BToss x r) eta
   (* Dice Roll Rule *)
   | HKRoll : 
       forall (eta: PAssertion) (x : string) (k : nat), hoare_triple (kroll_pt x k eta) (KRoll x k) eta
@@ -1010,7 +1162,14 @@ Theorem helper1: forall (P Q R : PAssertion),
 Proof. intros. apply functional_extensionality. intros. simpl. apply propositional_extensionality. easy.
 Qed.
                       
-Definition trivial_measure: Measure := (fun A : Assertion => 0%R).
+(* [MEASURE-FIX] must now be proved to BE a measure (was a bare function). *)
+Definition trivial_measure: Measure.
+Proof.
+  refine (mkMeasure (fun A : Assertion => 0%R) _ _ _).
+  - reflexivity.
+  - intros. lra.
+  - intros. lra.
+Defined.
 Definition trivial_intp : Intp := (fun y : string => 0%R).
 Definition trivial_pstate : Pstate := (trivial_measure, trivial_intp).
  (* -------------------------------------------------------------- *)
@@ -1046,7 +1205,7 @@ Qed.
 Theorem probtoss_short: forall x : string, {{ (prob true) = 1 }} x toss 0.5 {{ (prob (x)) = 0.5}}.
 Proof.
   intros. eapply HConseq.
-    + assert (H : PAImplies ({{ (prob true) = 1 }}) (btoss_pt x (0.5)  {{(prob (x)) = 0.5 }})).
+    + assert (H : PAImplies ({{ (prob true) = 1 }}) (btoss_pt x (0.5) ltac:(lra)  {{(prob (x)) = 0.5 }})).
       - simpl. unfold PAImplies. intros. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. simpl.
         unfold PTerm_of_R. 
         assert (H1 : (fun st : state => (x !-> True; snd st) x) = {{true}}).

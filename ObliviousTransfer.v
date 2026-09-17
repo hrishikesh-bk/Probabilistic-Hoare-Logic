@@ -42,7 +42,7 @@ Definition ObliviousTransfer : Cmd :=
 Theorem OT_Input_Indep : forall w x y z : bool, hoare_triple ({{ (prob (true)) = 1 }}) 
                           ObliviousTransfer ({{(prob ((c <-> w) /\ (r0 <-> x) /\ (r1 <-> y) /\ (e <-> z))) = ((prob (c <-> w))*(prob ((r0 <-> x) /\ (r1 <-> y) /\ (e <-> z))))}}).
 Proof. intros w x y z. apply HSeq with (eta2 := {{(prob ((c <-> w) /\ (r0 <-> x))) = ((prob (c <-> w))*(prob (r0 <-> x)))}}).
-        + apply HConseqLeft with (eta2 := (btoss_pt r0 (0.5)%R ({{(prob ((c <-> w) /\ (r0 <-> x))) = ((prob (c <-> w))*(prob (r0 <-> x)))}}))).
+        + apply HConseqLeft with (eta2 := (btoss_pt r0 (0.5)%R ltac:(lra) ({{(prob ((c <-> w) /\ (r0 <-> x))) = ((prob (c <-> w))*(prob (r0 <-> x)))}}))).
           - unfold PAImplies. intro ps. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             replace (1 - 0.5)%R with (0.5)%R by lra.
             replace (fst ps
@@ -89,7 +89,7 @@ Proof. intros w x y z. apply HSeq with (eta2 := {{(prob ((c <-> w) /\ (r0 <-> x)
           apply equivalence. unfold Assertion_equiv. intro st. rewrite t_update_neq. rewrite t_update_eq. tauto. easy.
          - apply HBToss.
         + apply HSeq with (eta2 := {{(prob ((c <-> w) /\ (r0 <-> x) /\ (r1 <-> y))) = ((prob (c <-> w))*(prob ((r0 <-> x) /\ (r1 <-> y))))}}).
-          - apply HConseqLeft with (eta2 := (btoss_pt r1 (0.5)%R ({{(prob ((c <-> w) /\ (r0 <-> x) /\ (r1 <-> y))) = ((prob (c <-> w))*(prob ((r0 <-> x) /\ (r1 <-> y))))}}))).
+          - apply HConseqLeft with (eta2 := (btoss_pt r1 (0.5)%R ltac:(lra) ({{(prob ((c <-> w) /\ (r0 <-> x) /\ (r1 <-> y))) = ((prob (c <-> w))*(prob ((r0 <-> x) /\ (r1 <-> y))))}}))).
             * unfold PAImplies. intro st. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic.
             replace (1 - 0.5)%R with (0.5)%R by lra.
             replace (fst st
@@ -163,7 +163,7 @@ Proof. intros w x y z. apply HSeq with (eta2 := {{(prob ((c <-> w) /\ (r0 <-> x)
           apply equivalence. unfold Assertion_equiv. intro st0. rewrite t_update_neq. rewrite t_update_eq. tauto. easy.
           * apply HBToss.
         - apply HSeq with (eta2 := (basgn_pt e <{ ((c /\ ~ d) \/ (~ c /\ d))}> ({{(prob ((c <-> w) /\ (r0 <-> x) /\ (r1 <-> y) /\ (e <-> z))) = ((prob (c <-> w))*(prob ((r0 <-> x) /\ (r1 <-> y) /\ (e <-> z))))}}))).
-          * apply HConseqLeft with (eta2 := (btoss_pt d (0.5)%R (basgn_pt e (<{ ((c /\ ~ d) \/ (~ c /\ d))}>) ({{(prob ((c <-> w) /\ (r0 <-> x) /\ (r1 <-> y) /\ (e <-> z))) = ((prob (c <-> w))*(prob ((r0 <-> x) /\ (r1 <-> y) /\ (e <-> z))))}})))).
+          * apply HConseqLeft with (eta2 := (btoss_pt d (0.5)%R ltac:(lra) (basgn_pt e (<{ ((c /\ ~ d) \/ (~ c /\ d))}>) ({{(prob ((c <-> w) /\ (r0 <-> x) /\ (r1 <-> y) /\ (e <-> z))) = ((prob (c <-> w))*(prob ((r0 <-> x) /\ (r1 <-> y) /\ (e <-> z))))}})))).
             ** unfold PAImplies. intro ps. unfold btoss_pt. unfold basgn_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. intro H.
                 replace (fst ps
       (fun st : state =>

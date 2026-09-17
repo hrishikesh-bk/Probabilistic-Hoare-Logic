@@ -35,30 +35,30 @@ Definition Herman : Cmd :=
 
 Theorem body1 : {{(prob true) = 1 }} <{a1 toss 0.5; a2 toss 0.5; a3 toss 0.5 }> {{(prob true) = 1}}.
 Proof. apply HSeq with (eta2 := {{(prob true) = 1}}). 
-        + apply HConseqLeft with (eta2 := btoss_pt a1 0.5 ({{(prob true) = 1}})).
+        + apply HConseqLeft with (eta2 := btoss_pt a1 0.5 ltac:(lra) ({{(prob true) = 1}})).
           - intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. lra.
           - apply HBToss.
         + apply HSeq with (eta2 := {{(prob true) = 1}}).
-          - apply HConseqLeft with (eta2 := btoss_pt a2 0.5 ({{(prob true) = 1}})).
+          - apply HConseqLeft with (eta2 := btoss_pt a2 0.5 ltac:(lra) ({{(prob true) = 1}})).
             * intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. lra. 
             * apply HBToss.
-          - apply HConseqLeft with (eta2 := btoss_pt a3 0.5 ({{(prob true) = 1}})).
+          - apply HConseqLeft with (eta2 := btoss_pt a3 0.5 ltac:(lra) ({{(prob true) = 1}})).
             * intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. lra. 
             * apply HBToss.
 Qed.
 
 Theorem body2: {{(prob true) = 1 }} <{a1 toss 0.5; a2 toss 0.5; a3 toss 0.5 }> {{(prob (a1 /\ a2 /\ a3)) = (0.125) }}.
 Proof. apply HSeq with (eta2 := {{(prob a1) = 0.5}}). 
-        + apply HConseqLeft with (eta2 := btoss_pt a1 0.5 ({{(prob a1) = 0.5}})).
+        + apply HConseqLeft with (eta2 := btoss_pt a1 0.5 ltac:(lra) ({{(prob a1) = 0.5}})).
           - intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. replace (fst ps (fun st : state => (a1 !-> True; (snd st)) a1)) with (fst ps {{true}}) by (apply equivalence; intro; easy).
             replace (fst ps (fun st : state => (a1 !-> False; (snd st)) a1)) with (fst ps {{false}}) by (apply equivalence; intro; easy). rewrite empty_set_measure. lra.
           - apply HBToss.
         + apply HSeq with (eta2 := {{(prob (a1 /\ a2)) = 0.25}}).
-          - apply HConseqLeft with (eta2 := btoss_pt a2 0.5 ({{(prob (a1 /\ a2)) = 0.25}})).
+          - apply HConseqLeft with (eta2 := btoss_pt a2 0.5 ltac:(lra) ({{(prob (a1 /\ a2)) = 0.25}})).
             * intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. replace (fst ps (fun st : state => ((a2 !-> True; (snd st)) a1) /\ ((a2 !-> True; (snd st)) a2))) with (fst ps a1) by (apply equivalence; intro; easy).
               replace (fst ps (fun st : state => ((a2 !-> False; (snd st)) a1) /\ ((a2 !-> False; (snd st)) a2))) with (fst ps {{false}}) by (apply equivalence; easy). rewrite empty_set_measure. lra. 
             * apply HBToss.
-          - apply HConseqLeft with (eta2 := btoss_pt a3 0.5 ({{(prob (a1 /\ a2 /\ a3)) = (0.125) }})).
+          - apply HConseqLeft with (eta2 := btoss_pt a3 0.5 ltac:(lra) ({{(prob (a1 /\ a2 /\ a3)) = (0.125) }})).
             * intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. replace (fst ps (fun st : state => ((a3 !-> True; (snd st)) a1) /\ (((a3 !-> True; (snd st)) a2) /\ ((a3 !-> True; (snd st)) a3)))) with (fst ps (fun st : state => (snd st a1) /\ (snd st a2))) by (apply equivalence; easy).
               replace (fst ps (fun st : state => ((a3 !-> False; (snd st)) a1) /\ (((a3 !-> False; (snd st)) a2) /\ ((a3 !-> False; (snd st)) a3)))) with (fst ps {{false}}) by (apply equivalence; easy). rewrite empty_set_measure. lra. 
             * apply HBToss.
@@ -66,16 +66,16 @@ Qed.
 
 Theorem body3: {{(prob true) = 1 }} <{a1 toss 0.5; a2 toss 0.5; a3 toss 0.5 }> {{(prob (~a1 /\ ~a2 /\ ~a3)) = (0.125) }}.
 Proof. apply HSeq with (eta2 := {{(prob ~a1) = 0.5}}). 
-        + apply HConseqLeft with (eta2 := btoss_pt a1 0.5 ({{(prob ~a1) = 0.5}})).
+        + apply HConseqLeft with (eta2 := btoss_pt a1 0.5 ltac:(lra) ({{(prob ~a1) = 0.5}})).
           - intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. replace (fst ps (fun st : state => ~((a1 !-> True; (snd st)) a1))) with (fst ps {{false}}) by (apply equivalence; intro; rewrite t_update_eq; easy).
             replace (fst ps (fun st : state => ~((a1 !-> False; (snd st)) a1))) with (fst ps {{true}}) by (apply equivalence; intro; easy). rewrite empty_set_measure. lra.
           - apply HBToss.
         + apply HSeq with (eta2 := {{(prob (~a1 /\ ~a2)) = 0.25}}).
-          - apply HConseqLeft with (eta2 := btoss_pt a2 0.5 ({{(prob (~a1 /\ ~a2)) = 0.25}})).
+          - apply HConseqLeft with (eta2 := btoss_pt a2 0.5 ltac:(lra) ({{(prob (~a1 /\ ~a2)) = 0.25}})).
             * intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. replace (fst ps (fun st : state => ~((a2 !-> True; (snd st)) a1) /\ ~((a2 !-> True; (snd st)) a2))) with (fst ps {{false}}) by (apply equivalence; intro; rewrite t_update_eq; easy).
               replace (fst ps (fun st : state => ~((a2 !-> False; (snd st)) a1) /\ ~((a2 !-> False; (snd st)) a2))) with (fst ps (fun st : state => ~ (snd st a1))) by (apply equivalence; easy). rewrite empty_set_measure. lra. 
             * apply HBToss.
-          - apply HConseqLeft with (eta2 := btoss_pt a3 0.5 ({{(prob (~a1 /\ ~a2 /\ ~a3)) = (0.125) }})).
+          - apply HConseqLeft with (eta2 := btoss_pt a3 0.5 ltac:(lra) ({{(prob (~a1 /\ ~a2 /\ ~a3)) = (0.125) }})).
             * intro. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. uncoerce_basic. replace (fst ps (fun st : state => ~((a3 !-> True; (snd st)) a1) /\ (~((a3 !-> True; (snd st)) a2) /\ ~((a3 !-> True; (snd st)) a3)))) with (fst ps {{false}}) by (apply equivalence; intro; rewrite t_update_eq; easy).
               replace (fst ps (fun st : state => ~((a3 !-> False; (snd st)) a1) /\ (~((a3 !-> False; (snd st)) a2) /\ ~((a3 !-> False; (snd st)) a3)))) with (fst ps (fun st : state => (~ (snd st a1)) /\ (~ (snd st a2)))) by (apply equivalence; easy). rewrite empty_set_measure. lra. 
             * apply HBToss.

@@ -1,6 +1,6 @@
 From PHL Require Import Maps.
-From PHL Require Import PHLTest.
 From PHL Require Import Uniform.
+From PHL Require Import PHLTest.
 From Coq Require Import Bool.
 From Coq Require Import Arith.
 From Coq Require Import EqNat.

@@ -302,7 +302,7 @@ Qed.
 
 Theorem tossb: forall (k : nat) (r : R), {{ (prob (val = k)) = r}}
 b toss 0.5  {{(prob ((val = k)) /\ b) = (0.5*r) /\ (prob ((val = k)) /\ ~ b) = (0.5*r)}}.
-Proof. intros. eapply HConseq with (eta2 := btoss_pt b 0.5 ({{(prob ((val = k)) /\ b) = (0.5*r) /\ (prob ((val = k)) /\ ~ b) = (0.5*r)}})).
+Proof. intros. eapply HConseq with (eta2 := btoss_pt b 0.5 ltac:(lra) ({{(prob ((val = k)) /\ b) = (0.5*r) /\ (prob ((val = k)) /\ ~ b) = (0.5*r)}})).
         + unfold PAImplies. intro. unfold Pteval. unfold btoss_pt. unfold measure_sub_btoss. unfold measure_sub_bexp.
           unfold assertion_sub_bexp. unfold CBoolexp_of_bexp. unfold CTermexp_of_Texp. unfold CTermexp_of_nat.
           unfold Teval. unfold Beval. unfold PTerm_of_R. replace (1 - 0.5)%R with (0.5)%R. simpl.
@@ -380,7 +380,7 @@ Proof. apply HConseq with (eta2:= eta_update_y_p ({{((prob (true /\ b)) = 0.5 /\
 Qed.
 
 Theorem tosst : {{(prob true) = 1}} <{ b toss 0.5 }>  {{((prob (true /\ b)) = 0.5 /\ (prob (true /\ ~ b)) = 0.5) }}.
-Proof. apply HConseqLeft with (eta2 := btoss_pt b 0.5 {{((prob (true /\ b)) = 0.5 /\ (prob (true /\ ~ b)) = 0.5) }}).
+Proof. apply HConseqLeft with (eta2 := btoss_pt b 0.5 ltac:(lra) {{((prob (true /\ b)) = 0.5 /\ (prob (true /\ ~ b)) = 0.5) }}).
         + intro. unfold btoss_pt. simpl. unfold measure_sub_btoss. unfold measure_sub_bexp. unfold assertion_sub_bexp. unfold Beval.
           unfold PTerm_of_R. simpl. replace (1 - 0.5)%R with (0.5%R).
           replace (fun st : state => True /\ ((b !-> True; (snd st)) b)) with (fun st : state => True).
