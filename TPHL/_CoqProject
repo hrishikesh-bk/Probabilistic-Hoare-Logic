@@ -34,7 +34,6 @@ Completeness/LoopOrder.v
 Completeness/LoopRules.v
 Completeness/LoopCertificate.v
 Completeness/FiniteCompleteness.v
-PaperPrograms.v
 Examples/Lib.v
 Examples/PrAtoms.v
 Examples/KRoll.v
