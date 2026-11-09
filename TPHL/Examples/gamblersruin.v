@@ -1,38 +1,22 @@
-(** Gambler's ruin (ported from the old [gamblersruin.v]).
+(** Gambler's ruin.
 
     The body: if [x0 >= 1] then toss [b] with rate 1/3 and move [x0] up on
     heads, down on tails; otherwise skip.  The main theorem bounds the
     probability of reaching 3 from 1 by 1/7 with [W^UB].
 
-    The proofs follow the old ones rule by rule: the same rules are applied
-    in the same order with the same intermediate assertions, written in TPHL
-    syntax.  Old names map as [HTAsgn] -> [HDomAssign] ([tasgn_pt] ->
-    [subst_dom_pformula]), [HBToss] -> [HBoolToss] ([btoss_pt] ->
-    [toss_pformula]), [HIfThen] -> [HIfEq] ([psfBpsf] -> [if_precondition]),
-    [HWhileUB] -> [HWhileUpper], [eta_update_y_p] -> [subst_prob_pformula].
-    The old [RigidUnchanged], [AddRigidRight] and [AddRigidBoth] are proved
-    below from the same rules as before.  Consequence side conditions are
-    proved by the tactic [gside].
+    Assignments and tosses are [HConseqLeft] onto [subst_dom_pformula] /
+    [toss_pformula] and [HDomAssign] / [HBoolToss]; ifs are [HConseqLeft]
+    onto [if_precondition] and [HIfEq]; logic variables are removed with
+    [HElimv], preceded by [HConseqLeft] to the substituted precondition
+    [subst_prob_pformula y p eta].  [RigidUnchanged], [AddRigidRight] and
+    [AddRigidBoth] are proved below from [HFree] and [HAnd].
 
-    Differences from the old proofs:
-    - [HElimv] is always preceded by [HConseqLeft] to the precondition
-      [subst_prob_pformula y p eta]; the old proof sometimes rewrote the goal
-      with an equation instead.
-    - The while rules take the body precondition [p_concentrated_unit g]
-      ([Pr(g) = Pr(tt) /\ Pr(tt) = 1]) instead of the old
-      [Pr(g) = 1 /\ Pr(g) = Pr(tt)], so each case of [ant_1to3] starts with
-      [HConseqLeft] to the helper theorems' precondition.  The body
-      postconditions are [finite_p_and] conjunctions with a leading [p_true]
-      (the old vectors ended with [True]); in both versions it is absorbed by
-      the consequence step on one component.
-    - [W^UB]'s precondition is [Box(beta /\ G_k) /\ Pr(tt) <= y] (old:
-      [Pr(beta /\ G_k) <= y /\ Pr(beta /\ G_k) = Pr(tt)]); the intermediate
-      assertion of the [HConseq] step in [Gambler3_UB] has the new shape.
-    - [xgeq1]'s postcondition is stated as [A /\ (B /\ C)]; the old proof
-      rewrote it to [(A /\ B) /\ C] before splitting; here that rewrite is an
-      [HConseqRight] step.
-    - [xeq1_UB]'s second part and [ant_1to3] use [proj1]/[proj2] where the
-      old proof applied a conjunction of triples directly. *)
+    The while rule's body precondition is [p_concentrated_unit g], so each
+    case of [ant_1to3] starts with [HConseqLeft] to the helper theorems'
+    precondition; [W^UB]'s precondition is [Box(beta /\ G_k) /\ Pr(tt) <= y],
+    the shape of the intermediate assertion of the [HConseq] step in
+    [Gambler3_UB].  [xgeq1]'s postcondition [A /\ (B /\ C)] is regrouped to
+    [(A /\ B) /\ C] by an [HConseqRight] step before splitting. *)
 From Stdlib Require Import Reals Lra Lia Strings.String Lists.List Setoid.
 Require Import PHL Examples.Lib Examples.PrAtoms.
 Require Import Soundness.StateFacts Soundness.AssertionFacts.
@@ -158,7 +142,7 @@ Ltac cfast :=
   first [ exfalso; lia | cleaf | tauto ].
 
 (** With all mass on [h], formulas that agree on [h] have the same
-    probability (the old proofs' "rewrite with [x0 = n]" step). *)
+    probability. *)
 Lemma Pr_conc_equiv (ps : Pstate) (h : CFormula) :
   pstate_admissible ps -> Pr[ps] h = Pr[ps] c_true ->
   forall g g', (forall v, satisfies v h -> (satisfies v g <-> satisfies v g')) ->
@@ -219,7 +203,7 @@ Tactic Notation "gconc" constr(Gs) :=
   end;
   unfold Pc in *; repeat split; lra.
 
-(** Finite additivity (the old [fin_additivity] steps). *)
+(** Finite additivity. *)
 Lemma Pr_sum2 (ps : Pstate) (g1 g2 g : CFormula) : pstate_admissible ps ->
   (forall v, ~ (satisfies v g1 /\ satisfies v g2)) ->
   (forall v, satisfies v g <-> satisfies v g1 \/ satisfies v g2) ->
@@ -351,8 +335,7 @@ Tactic Notation "gside" constr(atoms) :=
         repeat split; lra
       end ].
 
-(** * Rigid formulas (the old [RigidUnchanged], [AddRigidRight],
-      [AddRigidBoth]) *)
+(** * Rigid formulas *)
 
 Lemma RigidUnchanged (z : ProbLogicVar) (c : Cmd) (r : R) :
   hoare_derivable (p_eq (pvar z) (pconst r)) c (p_eq (pvar z) (pconst r)).
@@ -494,8 +477,7 @@ Proof.
   - gside (@nil CFormula).
 Qed.
 
-(** The two branches of the body from [x0 = n], [n >= 1] (the old
-    [ifcase], [elsecase], [ifcase2]). *)
+(** The two branches of the body from [x0 = n], [n >= 1]. *)
 Definition ifcase (x0 : DomProgramVar) (n : nat) : PFormula :=
   {{ ((prob (x0 = n)) = 1 /\ (prob (x0 = n)) = (prob true)) /\
      y1 = twothird /\ y2 = 0 /\ y3 = onethird }}.
@@ -694,7 +676,7 @@ Proof.
     + gside (@nil CFormula).
 Qed.
 (** The postcondition of [xgeq1], used as the intermediate assertion of
-    the consequence steps below (as in the old proofs). *)
+    the consequence steps below. *)
 Notation xgeq1_post x0 n :=
   {{ (prob (x0 = #((n - 1)%nat))) = twothird /\ (prob (x0 = #((n + 1)%nat))) = onethird
      /\ (prob true) = 1 }} (only parsing).
@@ -849,8 +831,8 @@ Fixpoint xlt1_1ton (max : nat) (x0 : DomProgramVar) : PFormula :=
   | S m => p_and (xlt1_1ton m x0) {{ (prob (x0 = #(S m))) <= 0 }}
   end.
 
-(** With no mass on [x0 >= 1], every [Pr(x0 = i)] with [i >= 1] is 0 (the
-    induction in the old [xlt1_ant] side condition). *)
+(** With no mass on [x0 >= 1], every [Pr(x0 = i)] with [i >= 1] is 0
+    (used in the [xlt1_ant] side condition). *)
 Lemma xlt1_1ton_valid (x0 : DomProgramVar) (m : nat) (ps : Pstate) :
   pstate_admissible ps -> Pr[ps] \{ x0 >= #(1%nat) \} = 0 -> psatisfies ps (xlt1_1ton m x0).
 Proof.
@@ -888,14 +870,14 @@ Qed.
 
 (** * The while rule *)
 
-(** Regions [x0 < 1], [x0 = 1], ..., [x0 = max] (the old [Gs max x0]). *)
+(** Regions [x0 < 1], [x0 = 1], ..., [x0 = max]. *)
 Definition Gs (x0 : DomProgramVar) (i : nat) : CFormula :=
   match i with
   | O => \{ ~ (x0 >= #(1%nat)) \}
   | S _ => \{ x0 = i \}
   end.
 
-(** Transitions (the old [Ps max]): region 0 stays put; region [i >= 1]
+(** Transitions: region 0 stays put; region [i >= 1]
     moves down with 2/3 and up with 1/3 (if still a region). *)
 Definition Ps (max i j : nat) : R :=
   match i with
@@ -904,15 +886,15 @@ Definition Ps (max i j : nat) : R :=
            else if andb (Nat.eqb j (i + 1)) (Nat.leb j max) then 1/3 else 0
   end.
 
-(** Exits (the old [Ts (S max)]): 1/3 from the top region, 0 elsewhere. *)
+(** Exits: 1/3 from the top region, 0 elsewhere. *)
 Definition Ts (max i : nat) : R := if Nat.eqb i max then 1/3 else 0.
 
 Definition GamblersRuin (max : nat) : Cmd :=
   CWhile \{ ~ (x >= max) \} (GamblersRuin_Body x).
 
-(** TPHL's body postcondition [finite_p_and 3 f /\ exit] nests to the left
-    with a leading [p_true]; the old vectors nested to the right.  Each case
-    of [ant_1to3] first steps to the old (right-nested) shape. *)
+(** The body postcondition [finite_p_and 3 f /\ exit] nests to the left
+    with a leading [p_true]; each case of [ant_1to3] first steps to the
+    right-nested shape, which its [HAnd] steps then split. *)
 Ltac reshape_side :=
   intros ps Hps H; unfold while_body_post_upper, Gs, Ps, Ts in *;
   cbn [finite_p_and Nat.eqb Nat.leb Nat.sub Nat.add andb] in *;

@@ -1,28 +1,19 @@
-(** Conditional samples (ported from the old [CondSamples.v]).
+(** Conditional samples.
 
     [z := toss(1/2); if z then (x := toss(p); y := toss(p))
                           else (x := toss(q); y := toss(q))].
     Given [z], the samples [x] and [y] are independent.
 
-    Change from the old file: the old toss rule accepted any rate.  In TPHL a
-    rate outside [0,1] denotes the zero kernel, which makes the old statements
-    false for such rates (all masses become 0), so every lemma that tosses with
-    [p] (resp. [q]) assumes [0 <= p <= 1] (resp. [0 <= q <= 1]).  Formulas the
-    old file wrote as [prob A /\ B /\ C] are written [prob (A /\ B /\ C)]
-    (same meaning: the old [prob] scoped over the whole conjunction).
+    A toss rate outside [0,1] denotes the zero kernel, so every lemma that
+    tosses with [p] (resp. [q]) assumes [0 <= p <= 1] (resp. [0 <= q <= 1]);
+    this also discharges [HBoolToss]'s premise [coin_probability_valid].
 
-    The proofs follow the old proofs rule by rule, with the same
-    intermediate assertions: [btoss_pt] is [toss_pformula], [basgn_pt] is
-    [subst_bool_pformula], [psfBpsf] is [if_precondition], [HIfThen] is
-    [HIfEq], [eta_update_y_p] is [subst_prob_pformula], and [eliminate_y] is
-    restated locally with the old statement.  Side conditions are proved by
-    [cs_side]/[indep_side] instead of the old manual rewriting.  Two small
-    deviations:
-    - The old [_int] proofs flipped a branch's postcondition [Pr(G) = y]
-      into [y = Pr(G)] by rewriting a Coq equality between assertions.
-      TPHL assertions are syntax, so the flip is an [HConseqRight] step.
-    - [HBoolToss] has the extra premise [coin_probability_valid p], which
-      is discharged from [0 <= p <= 1]. *)
+    Tosses and assignments are [HConseqLeft] onto [toss_pformula] /
+    [subst_bool_pformula] and the leaf rule; ifs are [HConseqLeft] onto
+    [if_precondition] and [HIfEq]; logic variables are removed with
+    [eliminate_y] (below).  In the [_int] proofs a branch postcondition
+    [Pr(G) = y] is turned into [y = Pr(G)] by an [HConseqRight] step.  Side
+    conditions are proved by [cs_side]/[indep_side]. *)
 From Stdlib Require Import Reals Lra Lia Strings.String Lists.List.
 Require Import PHL Examples.Lib Examples.PrAtoms Soundness.AssertionFacts.
 
@@ -72,7 +63,7 @@ Ltac cs_side :=
   first [ cs_auto
         | ptrans; pvalid; patoms [fvar x; fvar y; fvar z]; cs_subst; first [ring | lra | nra] ].
 
-(** The old [eliminate_y], with its statement: from
+(** [eliminate_y]: from
     [{eta1 /\ y = r} c {eta2}] derive [{eta1[y := r]} c {eta2[y := r]}].
     Derived from [HInstantiate] (ELIMV, FREE, AND) and CONS. *)
 Lemma eliminate_y (eta1 eta2 : PFormula) (v : ProbLogicVar) (r : R) (c : Cmd) :
@@ -88,8 +79,7 @@ Proof.
   apply psatisfies_and. split; [exact Hp|]. apply psatisfies_eq. reflexivity.
 Qed.
 
-(** [eliminate_y] for a closed term [p] with value [r] (the old rule took
-    any analytical [p]; here [y = 0.5 * q] is the term [0.5 * q]). *)
+(** [eliminate_y] for a closed term [p] with value [r] (e.g. [y = 0.5 * q]). *)
 Lemma eliminate_y_term (eta1 eta2 : PFormula) (v : ProbLogicVar) (p : Pterm) (r : R) (c : Cmd) :
   (forall ps, pterm_eval p ps = r) ->
   hoare_derivable (p_and eta1 (p_eq (PVar v) p)) c eta2 ->

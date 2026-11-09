@@ -1,21 +1,15 @@
-(** Herman's self-stabilising protocol, three processes (ported from the old
-    [Herman.v]).
+(** Herman's self-stabilising protocol, three processes.
 
     While all three bits agree, every process tosses a fair coin.  The loop
     terminates with probability 1.
 
-    The proofs follow the old file rule by rule ([body1]..[body4], the two
-    while rules, [Herman_termination_y], [Herman_termination]); only the side
-    conditions are proved differently.  Differences forced by TPHL:
-    - [HWhileUB]/[HWhileLB] become [HWhileUpper]/[HWhileLower].  Their
-      precondition is [box (guard /\ all_true) /\ Pr(true) <= y] (resp.
-      [>=]) instead of [Pr(guard /\ all_true) <= y /\ Pr(guard /\ all_true)
-      = Pr(true)]; the old auxiliary assertion [T] (rewriting the guard into
-      the rule's syntax) is not needed.
-    - The rules' body premise is a conjunction [finite_p_and 2 ...] that
-      starts with [p_true]; that conjunct is derived by [HFree] ([HTrue]),
-      the others exactly as in the old file.
-    - [eliminate_y] is [HInstantiate]. *)
+    [body1]..[body4] derive the loop body's effect; the two while rules
+    ([HWhileUpper], [HWhileLower]) give the upper and lower bounds, combined
+    in [Herman_termination_y]; [Herman_termination] instantiates [y] with
+    [HInstantiate].  The while rules' precondition is
+    [box (guard /\ all_true) /\ Pr(true) <= y] (resp. [>=]).  Their body
+    premise is a conjunction [finite_p_and 2 ...] that starts with [p_true];
+    that conjunct is derived by [HFree] ([HTrue]). *)
 From Stdlib Require Import Reals Lra Lia Strings.String Lists.List.
 Require Import PHL Examples.Lib Examples.PrAtoms Soundness.AssertionFacts.
 

@@ -1,4 +1,4 @@
-(** Oblivious transfer (ported from the old [ObliviousTransfer.v]).
+(** Oblivious transfer.
 
     The receiver's choice bit [c] is hidden by a fair mask [d]: what the
     sender sees, [(r0, r1, e)] with [e := c xor d], is independent of [c]. *)

@@ -2,8 +2,7 @@
 
     The examples are written over [nat_domain].  This file provides
     - notations for programs ([<{ c }>]), classical formulas ([\{ f \}]) and
-      probabilistic formulas ([{{ eta }}]) close to those of the old
-      [PHLTest.v];
+      probabilistic formulas ([{{ eta }}]);
     - facts about formula probabilities [Pr[ps] gamma];
     - tactics that turn a consequence side condition into arithmetic over
       formula probabilities;
@@ -428,7 +427,7 @@ Lemma HConseqRight pre c post post' :
   hoare_derivable pre c post'.
 Proof. intros H1 H2; exact (derive_post pre c post post' H2 H1). Qed.
 
-(** Exact IF (the old [HIfThen]). *)
+(** Exact IF. *)
 Lemma HIfEq eta1 eta2 (beta gamma : CFormula) y1 y2 c1 c2 :
   hoare_derivable eta1 c1 (p_eq (PVar y1) (PProb gamma)) ->
   hoare_derivable eta2 c2 (p_eq (PVar y2) (PProb gamma)) ->
@@ -454,7 +453,7 @@ Proof.
 Qed.
 
 (** Instantiate a probabilistic logic variable [y] by a constant [r] on both
-    sides of a derivable triple (ELIMV, FREE and AND; the old [eliminate_y]). *)
+    sides of a derivable triple (ELIMV, FREE and AND). *)
 Lemma HInstantiate y r pre c post :
   hoare_derivable pre c post ->
   hoare_derivable (subst_prob_pformula y (PConst r) pre) c

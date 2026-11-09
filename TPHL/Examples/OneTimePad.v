@@ -1,4 +1,4 @@
-(** One-time pad (ported from the old [OneTimePad.v]).
+(** One-time pad.
 
     [b] is a fair key bit and [c := m xor b].  The ciphertext is independent
     of the message, for one bit and for two bits encrypted with fresh keys. *)

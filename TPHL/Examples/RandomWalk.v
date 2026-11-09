@@ -1,24 +1,17 @@
-(** Biased random walk (ported from the old [RandomWalk.v]).
+(** Biased random walk.
 
     [while 1 <= x do (toss(b, 1/4); if b then x := x + 1 else x := x - 1)].
     Started at [x = 1], the walk reaches [x = 0] with probability at least
     [1 - 2 / (3^(n+1) - 1)] for every [n > 0] ([Rwalk_term]); the bound
-    comes from [W^LB] with the [n] regions [x = 1], ..., [x = n].
+    comes from [W^LB] with the [n] regions [x = 1], ..., [x = n]: region [i]
+    is [x = i + 1], so progress goes towards smaller indices.
 
-    Differences from the old file:
-    - The old [HWhileLB3] listed the regions as [x = n, ..., x = 1] with
-      progress towards larger indices; TPHL's [HWhileLower] wants progress
-      towards smaller indices, so region [i] is [x = i + 1].
-    - The vector-valued helpers ([G_vector], [P_vector], [T_vector],
-      [X_vector] and the lemmas about their [nth] entries) become the
-      nat-indexed functions [regions], [trans], [exits], [sol]; their
-      content is in [helper1] (regions in the guard), [helper2]
-      (disjointness), [helper3] (progress), [helper4] (body premise),
-      [rw_sum] and [sol_ok] (the linear inequalities), [helper6] (value of
-      the solution at [x = 1]).
-    - [Rwalk_term_int] drops the old auxiliary arguments [beta], [tempA]
-      (and the equations fixing them), which only served to match the old
-      rule's syntactic form. *)
+    The regions, transitions, exits and solution are the nat-indexed
+    functions [regions], [trans], [exits], [sol]; the while rule's side
+    conditions are [helper1] (regions in the guard), [helper2]
+    (disjointness), [helper3] (progress), [helper4] (body premise),
+    [rw_sum] and [sol_ok] (the linear inequalities), [helper6] (value of
+    the solution at [x = 1]). *)
 From Stdlib Require Import Reals Lra Lia Strings.String Lists.List Arith.PeanoNat.
 Require Import PHL Examples.Lib Examples.PrAtoms.
 Require Import Soundness.StateFacts Soundness.AssertionFacts Completeness.StructuralRules.
@@ -163,7 +156,7 @@ Theorem ifthen_02 (k : nat) :
 Proof. eapply HConseqLeft; [|apply HDomAssign]. rw_side. Qed.
 
 (** Side condition of the [HConseqLeft] into the conditioned precondition
-    of [HIfThen]. *)
+    of [HIfEq]. *)
 Definition if_atoms (k : nat) : list CFormula :=
   cons \{ x = k /\ b \} (cons \{ x = k /\ ~ b \}
     (cons (FProgBool b) (cons (c_not (FProgBool b)) nil))).
@@ -379,18 +372,18 @@ Qed.
 Definition regions (i : nat) : CFormula := \{ x = #(S i) \}.
 
 (** From [x = i + 1]: down to region [i - 1] with 3/4, up to [i + 1] with
-    1/4 (the old [P_vector]). *)
+    1/4. *)
 Definition trans (i j : nat) : R :=
   if Nat.eqb (S j) i then 0.75 else if Nat.eqb j (S i) then 0.25 else 0.
 
-(** Exit into [x = 0] with 3/4 from [x = 1] (the old [T_vector]). *)
+(** Exit into [x = 0] with 3/4 from [x = 1]. *)
 Definition exits (i : nat) : R := if Nat.eqb i 0 then 0.75 else 0.
 
 (** [f n v = 1 - (3^v - 1) / (3^(n+1) - 1)] solves the recurrence
     [f v = 3/4 f (v-1) + 1/4 f (v+1)] with [f 0 = 1], [f (n+1) = 0]. *)
 Definition f (n v : nat) : R := 1 - (3 ^ v - 1) / (3 ^ (n + 1) - 1).
 
-(** The solution at region [i] (the old [X_vector]). *)
+(** The solution at region [i]. *)
 Definition sol (n i : nat) : R := f n (S i).
 
 Lemma D_pos n : 0 < 3 ^ (n + 1) - 1.
@@ -466,7 +459,7 @@ Proof.
         (Nat.eqb_spec j (S (S i'))); subst; try lia; lra.
 Qed.
 
-(** The linear inequalities of [W^LB] (the old [lin_ineq_lb]); they hold
+(** The linear inequalities of [W^LB]; they hold
     with equality. *)
 Lemma sol_ok n : (n > 0)%nat -> while_lower_solution n (sol n) trans exits.
 Proof.
@@ -483,7 +476,7 @@ Proof.
     + assert (S (S (S i')) = S n) as -> by lia. rewrite f_top. lra.
 Qed.
 
-(** ** Side conditions (the old [helper1] .. [helper6]) *)
+(** ** Side conditions *)
 
 Lemma helper1 n : while_regions_in_guard n guard regions.
 Proof. unfold while_regions_in_guard, cformula_valid, guard, regions. intros i Hi. cdecide. Qed.
@@ -506,7 +499,7 @@ Ltac region_pre :=
     pcanon [g; \{ true \}] end;
   unfold Pc in *; split; lra.
 
-(** The body premise of [W^LB] for region [i] (the old [helper4]): one
+(** The body premise of [W^LB] for region [i]: one
     conjunct per region [j], from [body0] (to [x = k + 1]), [body1] (to
     [x = k - 1]) or [bodyvoid] (anywhere else), and the exit conjunct from
     [body1] at [x = 1] or [bodyvoid] (with [k1 = 0]) elsewhere. *)
@@ -540,7 +533,7 @@ Proof.
         lra.
 Qed.
 
-(** The solution at [x = 1] (the old [helper6]). *)
+(** The solution at [x = 1]. *)
 Lemma helper6 n : sol n 0 = 1 - 2 / (3 ^ (n + 1) - 1).
 Proof. unfold sol, f. cbn [pow]. replace (3 * 1 - 1) with 2 by lra. reflexivity. Qed.
 

@@ -1,4 +1,4 @@
-(** Uniform sampling from fair coins (ported from the old [Uniform.v]).
+(** Uniform sampling from fair coins.
 
     [uniform_exp k] builds [val] bit by bit: [k] times, toss [b] and set
     [val := #(2%nat) * val + b].  Starting from [val = 0] this gives the uniform
@@ -67,10 +67,9 @@ Definition twok (k : nat) : R := 1 / 2 ^ k.
 
 (** * One step: [Pr(val = k) = r] becomes [Pr(val = 2k) = Pr(val = 2k+1) = r/2]
 
-    As in the old file: each assignment by [HConseq] + [ASGR]
-    ([asgn2k*]), the conditional by [HIfThen] ([ifthenpre*]) and [HConseq]
-    ([intermediate*]), and the branch variables removed by [eliminate_y]
-    ([eliminate_y*], here [HInstantiate]). *)
+    Each assignment by [HConseq] + [HDomAssign] ([asgn2k*]), the
+    conditional by [HIfEq] ([ifthenpre*]) and [HConseq] ([intermediate*]),
+    and the branch variables removed by [HInstantiate] ([eliminate_y*]). *)
 
 Notation ifc :=
   (<{ if b then val := #(2%nat) * val + #(1%nat) else val := #(2%nat) * val end }>)
@@ -333,7 +332,7 @@ Proof.
   apply (Rmult_le_reg_r (2 ^ k)); [lra|]. field_simplify; lra.
 Qed.
 
-(** The old [post] and [post1]. *)
+(** Intermediate postconditions of [unif]. *)
 Definition post (k k1 : nat) : PFormula := {{ (prob (val = k1)) = #(twok k) }}.
 Definition post1 (k k1 : nat) : PFormula := {{ (prob (val < k1)) = #(INR k1 / 2 ^ k) }}.
 
@@ -446,8 +445,7 @@ Proof.
   - apply uniform_exp_true.
 Qed.
 
-(** The body premises of the while rules (the old [body_unif_t_prop],
-    [body_unif_prop_LB_t], [body_unif_prop], [body_unif_prop_LB]).  Their
+(** The body premises of the while rules.  Their
     precondition is the rule's "all mass in the region" form. *)
 Definition post_body_t (k : nat) : PFormula :=
   {{ (prob (k <= val)) <= #(1 - INR k / 2 ^ k) /\

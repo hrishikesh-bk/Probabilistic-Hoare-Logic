@@ -1,5 +1,4 @@
-(** Secure multi-party computation of a sum by additive secret sharing
-    (ported from the old [mpc.v]).
+(** Secure multi-party computation of a sum by additive secret sharing.
 
     Each party [i] splits its input [xi] into shares [ri1], [ri2] (uniform
     dice rolls over {0..p}) and [ri3 := (xi - ri1 - ri2) mod (p+1)]; the
@@ -35,7 +34,7 @@ Notation s2f := (dom_program_var "s2").
 Notation s3f := (dom_program_var "s3").
 Notation vf := (dom_program_var "v").
 
-(** [x roll p] of the old development. *)
+(** [x roll k]: draw [x] uniformly from {0, ..., k} (see [KRoll.v]). *)
 Notation "x 'roll' k" := (roll rc x k)
   (in custom tcom at level 0, x constr at level 0, k constr at level 0) : tphl_scope.
 

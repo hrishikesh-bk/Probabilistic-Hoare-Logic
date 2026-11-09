@@ -1,5 +1,5 @@
-(** The uniform dice roll [x roll k] of the old [PHLTest.v], as a derived
-    command with a derivable rule.
+(** The uniform dice roll [x roll k], as a derived command with a
+    derivable rule.
 
     TPHL has no dice-roll command.  [roll c x k] implements "draw [x]
     uniformly from {0, ..., k}" with biased tosses of an auxiliary Boolean
@@ -11,7 +11,7 @@
       [c], [Pr(g) = sum_{i <= k} 1/(k+1) * Pr(g[x := i])];
     - [HKRoll]: for every [k] and every postcondition [eta] not mentioning
       [c], [|- {kroll_pformula c x k eta} roll c x k {eta}], where
-      [kroll_pformula] replaces each [Pr(g)] by that sum (the old [HKRoll]).
+      [kroll_pformula] replaces each [Pr(g)] by that sum.
 
     The derivation goes through [loop_free_complete]: over any domain, every
     valid triple about a loop-free program is derivable.  That uses the
@@ -291,7 +291,7 @@ Proof.
   - intros [H1 H2]; rewrite IH1, IH2 by assumption; reflexivity.
 Qed.
 
-(** The old [HKRoll], derivable for every [k]. *)
+(** The dice-roll rule, derivable for every [k]. *)
 Theorem HKRoll k eta : pfree c eta ->
   hoare_derivable (kroll_pformula k eta) (roll k) eta.
 Proof.

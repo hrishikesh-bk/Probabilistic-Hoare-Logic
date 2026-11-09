@@ -1,4 +1,4 @@
-(** Common cause (ported from the old [CommonCause.v]).
+(** Common cause.
 
     Three fair coins [x], [y], [z]; [a := x \/ z] and [b := y \/ z].  Then [a]
     and [b] are independent given [z]. *)
@@ -25,10 +25,9 @@ Notation hf := (pconst (1/2)).
 Notation fth := (pconst (1/4)).
 Notation eth := (pconst (1/8)).
 
-(** The proof follows the old one rule by rule: a consequence step to a
-    closed form, then one [HSeq] per command, each toss and assignment by
-    [HConseqLeft] onto its transformer ([toss_pformula] = old [btoss_pt],
-    [subst_bool_pformula] = old [basgn_pt]) and the leaf rule. *)
+(** A consequence step to a closed form, then one [HSeq] per command; each
+    toss and assignment is [HConseqLeft] onto its transformer
+    ([toss_pformula], [subst_bool_pformula]) and the leaf rule. *)
 Theorem CommonCauseCondIndep (k1 k2 k3 : bool) :
   hoare_derivable
     {{ (prob true) = 1 }}

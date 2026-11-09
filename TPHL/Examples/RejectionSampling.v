@@ -1,20 +1,14 @@
-(** Rejection sampling (ported from the old [RejectionSampling.v]).
+(** Rejection sampling.
 
     [b0 := tt; b1 := tt; while (b0 /\ b1) do toss(b0, 1/2); toss(b1, 1/2)]
     ends with [b0 /\ ~b1] with probability exactly 1/3.
 
-    The proofs follow the old file rule by rule; only the side conditions are
-    proved differently.  Differences forced by TPHL:
-    - [HWhileUB]/[HWhileLB] become [HWhileUpper]/[HWhileLower], whose
-      precondition is [box (guard /\ (b0 /\ b1)) /\ Pr(true) <= y] (resp.
-      [>=]); the old auxiliary arguments [beta], [tempA] (which only matched
-      the old rule's syntax) are dropped.
-    - The rules' body premise starts from [p_concentrated_unit guard]; one
-      [HConseqLeft] turns it into the precondition of [Rsampling_body]
-      (the old [int_true_eq_one] premise was that precondition already).
-    - [eliminate_y] is [HInstantiate].
-    - [Rejection_sampling_correct] (the two assignments before the loop) is
-      new. *)
+    The loop bounds come from [HWhileUpper] and [HWhileLower], whose
+    precondition is [box (guard /\ (b0 /\ b1)) /\ Pr(true) <= y] (resp.
+    [>=]); [y] is then instantiated with [HInstantiate].  The rules' body
+    premise starts from [p_concentrated_unit guard]; one [HConseqLeft] turns
+    it into the precondition of [Rsampling_body].
+    [Rejection_sampling_correct] adds the two assignments before the loop. *)
 From Stdlib Require Import Reals Lra Lia Strings.String Lists.List.
 Require Import PHL Examples.Lib Examples.PrAtoms.
 
