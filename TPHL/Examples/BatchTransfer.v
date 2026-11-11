@@ -13,6 +13,7 @@ Open Scope string_scope.
 
 Module BatchTransfer.
 
+(** * General probability and loop helpers *)
 Section ProbabilityFacts.
 Context {D : Domain}.
 
@@ -183,6 +184,18 @@ Qed.
 
 End LoopFree.
 
+(** Instantiate a loop's mass parameter at one, retaining its analytical
+    equality through the command. The remaining goal is the loop rule itself. *)
+Ltac with_unit_mass pre cmd result bound y :=
+  change (hoare_derivable (subst_prob_pformula y (PConst 1) pre) cmd result);
+  eapply (HElimv pre result y (PConst 1) cmd); [|cbn; tauto|cbn; tauto];
+  eapply derive_post with (post := p_and bound (p_eq (PVar y) (PConst 1)));
+  [apply HAnd;
+    [|eapply derive_pre; [|apply HFree; cbn; tauto];
+      intros ps Hps H; apply psatisfies_and in H; tauto]
+  |intros ps Hps H; rewrite !psatisfies_and, !psatisfies_eq in H;
+    try apply psatisfies_eq; cbn in H |- *; intuition nra].
+
 Section LoopCertificates.
 Context {D : Domain}.
 
@@ -199,30 +212,19 @@ Lemma lower_unit m k (beta gamma : CFormula D) (body : Cmd D)
 Proof.
   intros Hk Hguard Hdis Hprogress Hbody Hsol.
   set (y := prob_logic_var "unit_mass").
-  change (hoare_derivable
-    (subst_prob_pformula y (PConst 1) (p_concentrated_unit (regions k)))
-    (CWhile beta body) (PFLe (PConst (solution k)) (PProb gamma))).
-  eapply (HElimv (p_concentrated_unit (regions k))
-    (PFLe (PConst (solution k)) (PProb gamma)) y (PConst 1) (CWhile beta body));
-    [|cbn; tauto|cbn; tauto].
-  eapply derive_post with (post := p_and
-    (PFLe (PMul (PConst (solution k)) (PVar y)) (PProb gamma))
-    (p_eq (PVar y) (PConst 1))).
-  - apply HAnd.
-    + eapply derive_pre; [|exact (HWhileLower m k beta gamma body regions solution exits
-        transitions y Hk Hguard Hdis Hprogress Hbody Hsol)].
-      intros ps Hps H; apply psatisfies_and in H; destruct H as [HU Hy].
-      apply psatisfies_and in HU; destruct HU as [Hs Hm].
-      apply psatisfies_eq in Hm, Hy. apply psatisfies_and; split.
-      * apply psatisfies_almost_sure.
-        apply (mass_on_support ps (regions k) _ c_true Hps Hs).
-        intros w Hw; rewrite satisfies_and; split; [intros _; apply satisfies_true|].
-        intros _; split; [exact (Hguard k Hk w Hw)|exact Hw].
-      * cbn in Hm, Hy |- *; lra.
-    + eapply derive_pre; [|apply HFree; cbn; tauto].
-      intros ps Hps H; apply psatisfies_and in H; tauto.
-  - intros ps Hps H; apply psatisfies_and in H; destruct H as [H Hy].
-    apply psatisfies_eq in Hy; cbn in H, Hy |- *; nra.
+  with_unit_mass (p_concentrated_unit (regions k)) (CWhile beta body)
+    (PFLe (PConst (solution k)) (PProb gamma))
+    (PFLe (PMul (PConst (solution k)) (PVar y)) (PProb gamma)) y.
+  eapply derive_pre; [|exact (HWhileLower m k beta gamma body regions solution exits
+    transitions y Hk Hguard Hdis Hprogress Hbody Hsol)].
+  intros ps Hps H; apply psatisfies_and in H; destruct H as [HU Hy].
+  apply psatisfies_and in HU; destruct HU as [Hs Hm].
+  apply psatisfies_eq in Hm, Hy. apply psatisfies_and; split.
+  - apply psatisfies_almost_sure.
+    apply (mass_on_support ps (regions k) _ c_true Hps Hs).
+    intros w Hw; rewrite satisfies_and; split; [intros _; apply satisfies_true|].
+    intros _; split; [exact (Hguard k Hk w Hw)|exact Hw].
+  - cbn in Hm, Hy |- *; lra.
 Qed.
 
 Lemma unit_of_probability_one ps (A : CFormula D) : pstate_admissible ps ->
@@ -255,26 +257,17 @@ Lemma while_not_unit (A beta gamma : CFormula D) body :
     (p_eq (PProb gamma) (PConst 1)).
 Proof.
   intro HA. set (y := prob_logic_var "unit_mass").
-  change (hoare_derivable (subst_prob_pformula y (PConst 1) (p_concentrated_unit A))
-    (CWhile beta body) (p_eq (PProb gamma) (PConst 1))).
-  eapply (HElimv (p_concentrated_unit A) (p_eq (PProb gamma) (PConst 1))
-    y (PConst 1) (CWhile beta body)); [|cbn; tauto|cbn; tauto].
-  eapply derive_post with (post := p_and
-    (p_and (p_eq (PProb gamma) (PProb c_true)) (p_eq (PProb c_true) (PVar y)))
-    (p_eq (PVar y) (PConst 1))).
-  - apply HAnd.
-    + eapply derive_pre; [|apply HWhileNot].
-      intros ps Hps H; apply psatisfies_and in H; destruct H as [HU Hy].
-      apply psatisfies_and in HU; destruct HU as [Hs Hm].
-      apply psatisfies_eq in Hm, Hy. apply psatisfies_and; split.
-      * apply psatisfies_almost_sure.
-        apply (mass_on_support ps A _ c_true Hps Hs).
-        intros w Hw; rewrite satisfies_and; specialize (HA w Hw); cbn; tauto.
-      * apply psatisfies_eq; cbn in Hm, Hy |- *; lra.
-    + eapply derive_pre; [|apply HFree; cbn; tauto].
-      intros ps Hps H; apply psatisfies_and in H; tauto.
-  - intros ps Hps H; rewrite !psatisfies_and, !psatisfies_eq in H.
-    apply psatisfies_eq; cbn in H |- *; lra.
+  with_unit_mass (p_concentrated_unit A) (CWhile beta body)
+    (p_eq (PProb gamma) (PConst 1))
+    (p_and (p_eq (PProb gamma) (PProb c_true)) (p_eq (PProb c_true) (PVar y))) y.
+  eapply derive_pre; [|apply HWhileNot].
+  intros ps Hps H; apply psatisfies_and in H; destruct H as [HU Hy].
+  apply psatisfies_and in HU; destruct HU as [Hs Hm].
+  apply psatisfies_eq in Hm, Hy. apply psatisfies_and; split.
+  - apply psatisfies_almost_sure.
+    apply (mass_on_support ps A _ c_true Hps Hs).
+    intros w Hw; rewrite satisfies_and; specialize (HA w Hw); cbn; tauto.
+  - apply psatisfies_eq; cbn in Hm, Hy |- *; lra.
 Qed.
 
 Lemma finite_delta m k (v : R) : (k < m)%nat ->
@@ -397,6 +390,21 @@ Qed.
 
 End LoopCertificates.
 
+Lemma unit_partition_sum {D} (ps : Pstate D) support pivot :
+  pstate_admissible ps -> psatisfies ps (p_concentrated_unit support) ->
+  mass ps pivot + mass ps (c_not pivot) = 1.
+Proof.
+  intros Hps Hunit.
+  pose proof (mass_split ps c_true pivot Hps) as Hsplit.
+  apply psatisfies_and in Hunit; destruct Hunit as [Hs Hmass].
+  apply psatisfies_eq in Hmass.
+  rewrite (mass_ext ps (c_and pivot c_true) pivot),
+    (mass_ext ps (c_and (c_not pivot) c_true) (c_not pivot)) in Hsplit;
+    try (intro w; rewrite satisfies_and; cbn; tauto).
+  change (mass ps c_true = 1) in Hmass; lra.
+Qed.
+
+(** * Protocol and specifications *)
 Definition seq_v := dom_program_var "seq".
 Definition exp_v := dom_program_var "exp".
 Definition time_v := dom_program_var "t".
@@ -561,57 +569,166 @@ Ltac support_arithmetic Hw :=
   end;
   cbn in Hw |- *;
   repeat rewrite Nat.mul_add_distr_l; repeat rewrite Nat.mul_1_r;
-  intuition (try discriminate; lia).
+  intuition (try congruence; lia).
 
-Ltac evaluate_attempt ps support Hps Hunit same different Esame Edifferent :=
-  let Hs := fresh "support" in
-  pose proof (proj1 (proj1 (psatisfies_and ps _ _) Hunit)) as Hs;
-  repeat lazymatch goal with
-  | |- context [measure_of (pstate_measure ps) (formula_assertion ?target)] =>
-    let E := fresh "event" in
-    first
-      [ assert (E : measure_of (pstate_measure ps) (formula_assertion target) = 0)
-          by (apply (mass_on_unit ps support target false Hps Hunit);
-              intros w Hw; solve [timeout 10 (support_arithmetic Hw)])
-      | assert (E : measure_of (pstate_measure ps) (formula_assertion target) = 1)
-          by (apply (mass_on_unit ps support target true Hps Hunit);
-              intros w Hw; solve [timeout 10 (support_arithmetic Hw)])
-      | assert (E : measure_of (pstate_measure ps) (formula_assertion target) =
-          same)
-          by (rewrite Esame; apply (mass_on_support ps support target _ Hps Hs);
-              intros w Hw; solve [timeout 10 (support_arithmetic Hw)])
-      | assert (E : measure_of (pstate_measure ps) (formula_assertion target) =
-          different)
-          by (rewrite Edifferent; apply (mass_on_support ps support target _ Hps Hs);
-              intros w Hw; solve [timeout 10 (support_arithmetic Hw)]) ];
-    rewrite E; clear E
+(** * Shared deterministic outcomes of a transmission attempt *)
+Definition attempt_tick gamma :=
+  subst_dom_cformula retries_v (add (var retries_v) (num 1))
+    (subst_dom_cformula time_v (add (var time_v) (num 1)) gamma).
+Definition attempt_reply (a : bool) gamma :=
+  subst_bool_cformula lostA_v (if a then c_true else FFalse)
+    (if a then attempt_tick gamma
+     else subst_bool_cformula acked_v c_true (attempt_tick gamma)).
+Definition attempt_pullback (d a : bool) gamma :=
+  subst_bool_cformula lostD_v (if d then c_true else FFalse)
+    (if d then attempt_tick gamma else
+      c_or (c_and (eqn (var seq_v) (var exp_v))
+              (subst_dom_cformula exp_v (add (var exp_v) (num 1)) (attempt_reply a gamma)))
+           (c_and (c_not (eqn (var seq_v) (var exp_v))) (attempt_reply a gamma))).
+
+Ltac branch_simpl :=
+  repeat first [rewrite subst_bool_cformula_correct |
+    rewrite subst_dom_cformula_correct | rewrite satisfies_and |
+    rewrite satisfies_or | rewrite satisfies_not];
+  cbn [satisfies flag eqn var add num term_eval nat_rel_eval nat_op_eval
+    nat_domain cformula_eval_bool c_true bool_program_values dom_program_values
+    update_bool update_dom bool_program_var_eq_dec dom_program_var_eq_dec
+    lostD_v lostA_v acked_v seq_v exp_v retries_v time_v];
+  cbn; repeat match goal with
+  | |- context [bool_program_var_eq_dec ?x ?y] =>
+      destruct (bool_program_var_eq_dec x y); [try discriminate | try congruence]
+  | |- context [dom_program_var_eq_dec ?x ?y] =>
+      destruct (dom_program_var_eq_dec x y); [try discriminate | try congruence]
+  end; cbn.
+
+(** Normalize the random attempt once, for an arbitrary output event. *)
+Lemma attempt_preterm p q gamma ps : pstate_admissible ps ->
+  pterm_eval (preterm (attempt p q) gamma) ps =
+    p * mass ps (attempt_pullback true true gamma) +
+    (1-p)*q * mass ps (attempt_pullback false true gamma) +
+    rho p q * mass ps (attempt_pullback false false gamma).
+Proof.
+  intro Hps.
+  rewrite (mass_split ps (attempt_pullback false true gamma)
+    (eqn (var seq_v) (var exp_v)) Hps),
+    (mass_split ps (attempt_pullback false false gamma)
+    (eqn (var seq_v) (var exp_v)) Hps).
+  remember (mass ps (attempt_pullback true true gamma)) as md eqn:ED.
+  remember (mass ps (c_and (eqn (var seq_v) (var exp_v))
+    (attempt_pullback false true gamma))) as ma1 eqn:EA1.
+  remember (mass ps (c_and (c_not (eqn (var seq_v) (var exp_v)))
+    (attempt_pullback false true gamma))) as ma0 eqn:EA0.
+  remember (mass ps (c_and (eqn (var seq_v) (var exp_v))
+    (attempt_pullback false false gamma))) as ms1 eqn:ES1.
+  remember (mass ps (c_and (c_not (eqn (var seq_v) (var exp_v)))
+    (attempt_pullback false false gamma))) as ms0 eqn:ES0.
+  cbn [attempt preterm lift_preterm subst_dom_pterm subst_bool_pterm
+    condition_pterm toss_pterm pterm_eval].
+  repeat match goal with
+  | |- context [measure_of (pstate_measure ps) (formula_assertion ?g)] =>
+      let E := fresh "branch_event" in
+      first
+        [ assert (E : mass ps g = 0) by
+            (transitivity (mass ps FFalse); [apply mass_ext; intro w;
+              branch_simpl; intuition discriminate | apply mass_false])
+        | multimatch goal with
+          | HE : ?v = mass ps ?event |- _ =>
+            assert (E : mass ps g = v) by
+              (rewrite HE; apply mass_ext; intro w;
+                unfold attempt_pullback, attempt_reply, attempt_tick;
+                branch_simpl; intuition discriminate)
+          end ];
+      cbn [mass pterm_eval] in E; rewrite E; clear E
   end.
+  unfold rho; ring.
+Qed.
 
+
+Definition attempt_state (d a : bool) (w : state nat_domain) :=
+  let wd := update_bool w lostD_v d in
+  let received :=
+    if Nat.eqb (dom_program_values w seq_v) (dom_program_values w exp_v)
+    then update_dom wd exp_v (dom_program_values w exp_v + 1)%nat else wd in
+  let wa := update_bool received lostA_v a in
+  let replied := if a then wa else update_bool wa acked_v true in
+  let result := if d then wd else replied in
+  update_dom (update_dom result retries_v (dom_program_values w retries_v + 1)%nat)
+    time_v (dom_program_values w time_v + 1)%nat.
+
+Lemma attempt_pullback_correct d a gamma w :
+  satisfies w (attempt_pullback d a gamma) <-> satisfies (attempt_state d a w) gamma.
+Proof.
+  destruct d, a; unfold attempt_pullback, attempt_reply, attempt_tick, attempt_state;
+    branch_simpl; try (intuition discriminate);
+    destruct (Nat.eqb (dom_program_values w seq_v)
+      (dom_program_values w exp_v)) eqn:E;
+    cbn; intuition discriminate.
+Qed.
+
+Lemma attempt_branch_unit d a gamma ps S b : pstate_admissible ps ->
+  psatisfies ps (p_concentrated_unit S) ->
+  (forall w, satisfies w S -> (satisfies (attempt_state d a w) gamma <-> b = true)) ->
+  mass ps (attempt_pullback d a gamma) = if b then 1 else 0.
+Proof.
+  intros Hps HS H.
+  apply (mass_on_unit ps S _ b Hps HS); intros w Hw.
+  rewrite attempt_pullback_correct; apply H; exact Hw.
+Qed.
+
+Lemma attempt_exact S gamma p q (bd ba bs : bool) : 0<=p<1 -> 0<=q<1 ->
+  (forall w, satisfies w S -> (satisfies (attempt_state true true w) gamma <-> bd = true)) ->
+  (forall w, satisfies w S -> (satisfies (attempt_state false true w) gamma <-> ba = true)) ->
+  (forall w, satisfies w S -> (satisfies (attempt_state false false w) gamma <-> bs = true)) ->
+  hoare_derivable (p_concentrated_unit S) (attempt p q)
+    (p_eq (PProb gamma) (PConst
+      (p*(if bd then 1 else 0)+(1-p)*q*(if ba then 1 else 0)+rho p q*(if bs then 1 else 0)))).
+Proof.
+  intros Hp Hq HD HA HS; apply loop_free_exact; [apply attempt_loop_free; lra|].
+  intros ps Hps HU; rewrite attempt_preterm by exact Hps.
+  rewrite (attempt_branch_unit _ _ _ ps S bd Hps HU HD),
+    (attempt_branch_unit _ _ _ ps S ba Hps HU HA),
+    (attempt_branch_unit _ _ _ ps S bs Hps HU HS); reflexivity.
+Qed.
+
+(** Common post-state facts for the bounded-retry rules. *)
+Definition attempt_outcome K N c j (d a : bool) :=
+  if orb d a then inner_region K N c (S j)
+  else c_and (chunk_ack K N c) (eqn (var retries_v) (num (S j))).
+
+Ltac attempt_arithmetic w Hw :=
+  unfold attempt_state;
+  let E := fresh "received" in
+  destruct (Nat.eqb (dom_program_values w seq_v) (dom_program_values w exp_v)) eqn:E;
+  [apply Nat.eqb_eq in E | apply Nat.eqb_neq in E];
+  support_arithmetic Hw.
+
+Lemma attempt_outcome_state K N c j d a : (j<K)%nat ->
+  forall w, satisfies w (inner_region K N c j) ->
+  satisfies (attempt_state d a w) (attempt_outcome K N c j d a).
+Proof.
+  intros Hj w Hw; destruct d, a; unfold attempt_outcome; cbn [orb];
+    attempt_arithmetic w Hw.
+Qed.
+
+Ltac use_attempt_outcome K N c j Hj :=
+  intros w Hw;
+  match goal with
+  | |- satisfies (attempt_state ?d ?a w) _ <-> _ =>
+      let HS := fresh "outcome" in
+      pose proof (attempt_outcome_state K N c j d a Hj w Hw) as HS;
+      generalize HS; generalize (attempt_state d a w); intros out Hout;
+      unfold attempt_outcome in Hout; cbn [orb] in Hout;
+      support_arithmetic Hout
+  end.
 Lemma attempt_ack K N c j p q :
   0 <= p < 1 -> 0 <= q < 1 -> (j < K)%nat ->
   hoare_derivable (p_concentrated_unit (inner_region K N c j)) (attempt p q)
     (p_eq (PProb (c_and (c_not (inner_guard K)) (chunk_ack K N c))) (PConst (rho p q))).
 Proof.
-  intros Hp Hq Hj. apply loop_free_exact; [apply attempt_loop_free; lra|].
-  intros ps Hps Hunit.
-  remember (mass ps (eqn (var seq_v) (var exp_v))) as same eqn:Esame.
-  remember (mass ps (c_not (eqn (var seq_v) (var exp_v)))) as different eqn:Edifferent.
-  cbn [attempt preterm lift_preterm subst_dom_pterm subst_bool_pterm toss_pterm
-    condition_pterm pterm_eval].
-  evaluate_attempt ps (inner_region K N c j) Hps Hunit same different Esame Edifferent.
-  pose proof (mass_split ps c_true (eqn (var seq_v) (var exp_v)) Hps) as Hsplit.
-  pose proof (proj2 (proj1 (psatisfies_and ps _ _) Hunit)) as Hmass.
-  apply psatisfies_eq in Hmass.
-  assert (Hpart : mass ps (eqn (var seq_v) (var exp_v)) +
-    mass ps (c_not (eqn (var seq_v) (var exp_v))) = 1).
-  { rewrite (mass_ext ps (c_and (eqn (var seq_v) (var exp_v)) c_true)
-      (eqn (var seq_v) (var exp_v))),
-      (mass_ext ps (c_and (c_not (eqn (var seq_v) (var exp_v))) c_true)
-      (c_not (eqn (var seq_v) (var exp_v)))) in Hsplit;
-      try (intro w; rewrite satisfies_and; cbn; tauto).
-    change (mass ps c_true = 1) in Hmass; lra. }
-  rewrite <- Esame, <- Edifferent in Hpart.
-  unfold rho; nra.
+  intros Hp Hq Hj.
+  replace (rho p q) with (p*0+(1-p)*q*0+rho p q*1) by ring.
+  apply (attempt_exact _ _ p q false false true Hp Hq);
+    use_attempt_outcome K N c j Hj.
 Qed.
 
 Lemma attempt_continue K N c j p q :
@@ -619,26 +736,10 @@ Lemma attempt_continue K N c j p q :
   hoare_derivable (p_concentrated_unit (inner_region K N c j)) (attempt p q)
     (p_eq (PProb (inner_region K N c (S j))) (PConst (1-rho p q))).
 Proof.
-  intros Hp Hq Hj. apply loop_free_exact; [apply attempt_loop_free; lra|].
-  intros ps Hps Hunit.
-  remember (mass ps (eqn (var seq_v) (var exp_v))) as same eqn:Esame.
-  remember (mass ps (c_not (eqn (var seq_v) (var exp_v)))) as different eqn:Edifferent.
-  cbn [attempt preterm lift_preterm subst_dom_pterm subst_bool_pterm toss_pterm
-    condition_pterm pterm_eval].
-  evaluate_attempt ps (inner_region K N c j) Hps Hunit same different Esame Edifferent.
-  pose proof (mass_split ps c_true (eqn (var seq_v) (var exp_v)) Hps) as Hsplit.
-  pose proof (proj2 (proj1 (psatisfies_and ps _ _) Hunit)) as Hmass.
-  apply psatisfies_eq in Hmass.
-  assert (Hpart : mass ps (eqn (var seq_v) (var exp_v)) +
-    mass ps (c_not (eqn (var seq_v) (var exp_v))) = 1).
-  { rewrite (mass_ext ps (c_and (eqn (var seq_v) (var exp_v)) c_true)
-      (eqn (var seq_v) (var exp_v))),
-      (mass_ext ps (c_and (c_not (eqn (var seq_v) (var exp_v))) c_true)
-      (c_not (eqn (var seq_v) (var exp_v)))) in Hsplit;
-      try (intro w; rewrite satisfies_and; cbn; tauto).
-    change (mass ps c_true = 1) in Hmass; lra. }
-  rewrite <- Esame, <- Edifferent in Hpart.
-  unfold rho; nra.
+  intros Hp Hq Hj; assert (HjK : (j<K)%nat) by lia.
+  replace (1-rho p q) with (p*1+(1-p)*q*1+rho p q*0) by (unfold rho; ring).
+  apply (attempt_exact _ _ p q true true false Hp Hq);
+    use_attempt_outcome K N c j HjK.
 Qed.
 
 Lemma attempt_exhausted K N c j p q :
@@ -647,26 +748,10 @@ Lemma attempt_exhausted K N c j p q :
     (p_eq (PProb (c_and (c_not (inner_guard K)) (chunk_exhausted K N c)))
       (PConst (1-rho p q))).
 Proof.
-  intros Hp Hq Hj. apply loop_free_exact; [apply attempt_loop_free; lra|].
-  intros ps Hps Hunit.
-  remember (mass ps (eqn (var seq_v) (var exp_v))) as same eqn:Esame.
-  remember (mass ps (c_not (eqn (var seq_v) (var exp_v)))) as different eqn:Edifferent.
-  cbn [attempt preterm lift_preterm subst_dom_pterm subst_bool_pterm toss_pterm
-    condition_pterm pterm_eval].
-  evaluate_attempt ps (inner_region K N c j) Hps Hunit same different Esame Edifferent.
-  pose proof (mass_split ps c_true (eqn (var seq_v) (var exp_v)) Hps) as Hsplit.
-  pose proof (proj2 (proj1 (psatisfies_and ps _ _) Hunit)) as Hmass.
-  apply psatisfies_eq in Hmass.
-  assert (Hpart : mass ps (eqn (var seq_v) (var exp_v)) +
-    mass ps (c_not (eqn (var seq_v) (var exp_v))) = 1).
-  { rewrite (mass_ext ps (c_and (eqn (var seq_v) (var exp_v)) c_true)
-      (eqn (var seq_v) (var exp_v))),
-      (mass_ext ps (c_and (c_not (eqn (var seq_v) (var exp_v))) c_true)
-      (c_not (eqn (var seq_v) (var exp_v)))) in Hsplit;
-      try (intro w; rewrite satisfies_and; cbn; tauto).
-    change (mass ps c_true = 1) in Hmass; lra. }
-  rewrite <- Esame, <- Edifferent in Hpart.
-  unfold rho; nra.
+  intros Hp Hq Hj; assert (HjK : (j<K)%nat) by lia.
+  replace (1-rho p q) with (p*1+(1-p)*q*1+rho p q*0) by (unfold rho; ring).
+  apply (attempt_exact _ _ p q true true false Hp Hq);
+    use_attempt_outcome K N c j HjK.
 Qed.
 
 Lemma rho_bounds p q : 0 <= p < 1 -> 0 <= q < 1 -> 0 < rho p q <= 1.
@@ -714,7 +799,6 @@ Lemma outer_failure_equation K N c p q : (c < N)%nat ->
     (1-sigma K p q) + sigma K p q * (1-sigma K p q ^ (N-S c)).
 Proof. intro Hc; rewrite (outer_success_equation K N c p q Hc); ring. Qed.
 
-
 Lemma exact_lower {D} pre cmd (A : CFormula D) x :
   hoare_derivable pre cmd (p_eq (PProb A) (PConst x)) ->
   hoare_derivable pre cmd (PFLe (PConst x) (PProb A)).
@@ -733,6 +817,7 @@ Proof.
   intros Hjk w [Hw Hk]. state_simpl Hw; state_simpl Hk; intuition lia.
 Qed.
 
+(** * Bounded retries and batch success/safety *)
 Lemma inner_success_lower K N c j p q :
   0 <= p < 1 -> 0 <= q < 1 -> (j < K)%nat ->
   hoare_derivable (p_concentrated_unit (inner_region K N c j))
@@ -806,7 +891,6 @@ Proof.
     apply inner_failure_lower; assumption.
 Qed.
 
-
 Definition failure : CFormula nat_domain := c_and (flag fail_v) receiver_safe.
 
 Lemma dom_assign_unit {D} x value (A B : CFormula D) :
@@ -822,44 +906,50 @@ Proof.
     [intros _; apply satisfies_true|intros _; apply H; exact Hw].
 Qed.
 
-Lemma unit_partition_sum {D} (ps : Pstate D) support pivot :
-  pstate_admissible ps -> psatisfies ps (p_concentrated_unit support) ->
-  mass ps pivot + mass ps (c_not pivot) = 1.
+Definition finish_state (w : state nat_domain) :=
+  if bool_program_values w acked_v then
+    update_dom (update_dom w seq_v (dom_program_values w seq_v + 1)%nat)
+      remaining_v (dom_program_values w remaining_v - 1)%nat
+  else update_bool w fail_v true.
+
+(** A deterministic finish maps an output event to one input event. *)
+Lemma finish_preterm_event ps gamma S pivot : pstate_admissible ps ->
+  psatisfies ps (p_concentrated_unit S) ->
+  (forall w, satisfies w S ->
+    (satisfies (finish_state w) gamma <-> satisfies w pivot)) ->
+  pterm_eval (preterm finish_chunk gamma) ps = mass ps pivot.
 Proof.
-  intros Hps Hunit.
-  pose proof (mass_split ps c_true pivot Hps) as Hsplit.
-  apply psatisfies_and in Hunit; destruct Hunit as [Hs Hmass].
-  apply psatisfies_eq in Hmass.
-  rewrite (mass_ext ps (c_and pivot c_true) pivot),
-    (mass_ext ps (c_and (c_not pivot) c_true) (c_not pivot)) in Hsplit;
-    try (intro w; rewrite satisfies_and; cbn; tauto).
-  change (mass ps c_true = 1) in Hmass; lra.
+  intros Hps HU H; apply psatisfies_and in HU; destruct HU as [HU _].
+  cbn [finish_chunk preterm lift_preterm subst_dom_pterm subst_bool_pterm
+    condition_pterm pterm_eval].
+  rewrite (mass_split ps pivot (flag acked_v) Hps).
+  apply f_equal2; apply (mass_on_support ps S _ _ Hps HU);
+    intros w Hw; specialize (H w Hw); unfold finish_state in H;
+    branch_simpl; destruct (bool_program_values w acked_v); cbn in H |- *;
+    intuition discriminate.
 Qed.
 
-Ltac finish_probability K N c p q :=
+Ltac finish_event ps Hps HS support pivot arithmetic :=
+  rewrite (finish_preterm_event ps _ support pivot Hps HS);
+  [|intros w Hw; unfold finish_state;
+    destruct (bool_program_values w acked_v) eqn:E; arithmetic Hw].
+
+Ltac finish_probability K N c p q pivot :=
   intros ps Hps HP;
   unfold exact_partition in HP;
   apply psatisfies_and in HP; destruct HP as [HA HP];
   apply psatisfies_and in HP; destruct HP as [HB HU];
   apply psatisfies_eq in HA, HB;
-  remember (mass ps (chunk_ack K N c)) as same eqn:Esame;
-  remember (mass ps (c_not (chunk_ack K N c))) as different eqn:Edifferent;
-  pose proof (unit_partition_sum ps _ (chunk_ack K N c) Hps HU) as Hpart;
-  rewrite <-Esame, <-Edifferent in Hpart;
-  change (mass ps (chunk_ack K N c) = sigma K p q) in HA;
-  rewrite <-Esame in HA;
-  cbn [finish_chunk preterm lift_preterm subst_dom_pterm subst_bool_pterm
-    condition_pterm pterm_eval];
-  evaluate_attempt ps (c_or (chunk_ack K N c) (chunk_exhausted K N c))
-    Hps HU same different Esame Edifferent;
-  lra.
+  finish_event ps Hps HU (c_or (chunk_ack K N c) (chunk_exhausted K N c))
+    pivot ltac:(fun H => support_arithmetic H);
+  assumption.
 
 Lemma finish_ack K N c p q : (c < N)%nat ->
   hoare_derivable (exact_partition (chunk_ack K N c) (chunk_exhausted K N c) (sigma K p q))
     finish_chunk (p_eq (PProb (outer_region K N (S c))) (PConst (sigma K p q))).
 Proof.
   intro Hc. apply loop_free_exact; [apply finish_loop_free|].
-  finish_probability K N c p q.
+  finish_probability K N c p q (chunk_ack K N c).
 Qed.
 
 Lemma finish_failure K N c p q : (c < N)%nat ->
@@ -867,7 +957,7 @@ Lemma finish_failure K N c p q : (c < N)%nat ->
     finish_chunk (p_eq (PProb failure) (PConst (1-sigma K p q))).
 Proof.
   intro Hc. apply loop_free_exact; [apply finish_loop_free|].
-  unfold failure. finish_probability K N c p q.
+  unfold failure. finish_probability K N c p q (chunk_exhausted K N c).
 Qed.
 
 Lemma chunk_exact K N c p q :
@@ -892,7 +982,6 @@ Proof.
         -- apply exact_lower, finish_ack; assumption.
         -- apply exact_lower, finish_failure; assumption.
 Qed.
-
 
 Lemma chunk_next_lower K N c p q :
   (0<K)%nat -> (c<N)%nat -> 0<=p<1 -> 0<=q<1 ->
@@ -1053,7 +1142,6 @@ Proof.
   intros ps Hps H; apply partition_implies_batch_post; assumption.
 Qed.
 
-
 Lemma unit_partition {D} (A B : CFormula D) ps : pstate_admissible ps ->
   (forall w, satisfies w A -> ~ satisfies w B) ->
   psatisfies ps (p_concentrated_unit A) -> psatisfies ps (exact_partition A B 1).
@@ -1098,14 +1186,11 @@ Proof.
         -- intros ps Hps H; apply unit_of_probability_one; assumption.
       * apply loop_free_exact; [apply finish_loop_free|].
         intros ps Hps HU.
-        cbn [finish_chunk preterm lift_preterm subst_dom_pterm subst_bool_pterm
-          condition_pterm pterm_eval].
-        match goal with |- ?a + ?b = 1 =>
-          assert (HA : a = 0) by (apply (mass_on_unit ps (inner_region 0 N 0 0) _ false Hps HU);
-            intros w Hw; unfold failure; support_arithmetic Hw);
-          assert (HB : b = 1) by (apply (mass_on_unit ps (inner_region 0 N 0 0) _ true Hps HU);
-            intros w Hw; unfold failure; support_arithmetic Hw)
-        end; lra.
+        unfold failure.
+        finish_event ps Hps HU (inner_region 0 N 0 0) (c_true (D := nat_domain))
+          ltac:(fun H => support_arithmetic H).
+        apply psatisfies_and in HU; destruct HU as [_ HM];
+        apply psatisfies_eq in HM; exact HM.
 Qed.
 
 Theorem batch_transfer_zero_attempts N p q : (0<N)%nat ->
@@ -1151,6 +1236,7 @@ Qed.
 
 End BatchTransfer.
 
+(** * Fast-path timing *)
 Module BatchTransferTiming.
 Import BatchTransfer.
 
@@ -1167,28 +1253,6 @@ Definition first_ack := c_and (flag acked_v) (eqn (var retries_v) (num 1)).
 Ltac timing_arithmetic Hw :=
   unfold timed_region, timed_inner, clock_mode, retry_positive, first_ack in Hw |- *;
   support_arithmetic Hw.
-
-Ltac evaluate_timing ps support Hps Hunit same different Esame Edifferent :=
-  let Hs := fresh "support" in
-  pose proof (proj1 (proj1 (psatisfies_and ps _ _) Hunit)) as Hs;
-  repeat lazymatch goal with
-  | |- context [measure_of (pstate_measure ps) (formula_assertion ?target)] =>
-    let E := fresh "event" in
-    first
-      [ assert (E : measure_of (pstate_measure ps) (formula_assertion target) = 0)
-          by (apply (mass_on_unit ps support target false Hps Hunit);
-              intros w Hw; solve [timeout 15 (timing_arithmetic Hw)])
-      | assert (E : measure_of (pstate_measure ps) (formula_assertion target) = 1)
-          by (apply (mass_on_unit ps support target true Hps Hunit);
-              intros w Hw; solve [timeout 15 (timing_arithmetic Hw)])
-      | assert (E : measure_of (pstate_measure ps) (formula_assertion target) = same)
-          by (rewrite Esame; apply (mass_on_support ps support target _ Hps Hs);
-              intros w Hw; solve [timeout 15 (timing_arithmetic Hw)])
-      | assert (E : measure_of (pstate_measure ps) (formula_assertion target) = different)
-          by (rewrite Edifferent; apply (mass_on_support ps support target _ Hps Hs);
-              intros w Hw; solve [timeout 15 (timing_arithmetic Hw)]) ];
-    rewrite E; clear E
-  end.
 
 Lemma unit_implies {D} ps (A B : CFormula D) : pstate_admissible ps ->
   (forall w, satisfies w A -> satisfies w B) ->
@@ -1237,20 +1301,12 @@ Lemma attempt_clock K N c j late p q : 0<=p<1 -> 0<=q<1 ->
   hoare_derivable (p_concentrated_unit (timed_inner K N c j late)) (attempt p q)
     (p_concentrated_unit (c_and (clock_mode c late) (eqn (var retries_v) (num (S j))))).
 Proof.
-  intros Hp Hq. eapply derive_post; [apply loop_free_exact with
-    (target := c_and (clock_mode c late) (eqn (var retries_v) (num (S j)))) (value := 1)|].
-  - apply attempt_loop_free; lra.
-  - intros ps Hps HU. destruct late;
-    remember (mass ps (eqn (var seq_v) (var exp_v))) as same eqn:Esame;
-    remember (mass ps (c_not (eqn (var seq_v) (var exp_v)))) as different eqn:Edifferent;
-    pose proof (unit_partition_sum ps _ (eqn (var seq_v) (var exp_v)) Hps HU) as Hpart;
-    rewrite <-Esame, <-Edifferent in Hpart;
-    cbn [attempt preterm lift_preterm subst_dom_pterm subst_bool_pterm toss_pterm
-      condition_pterm pterm_eval];
-    match type of HU with
-    | psatisfies _ (p_concentrated_unit ?support) =>
-      evaluate_timing ps support Hps HU same different Esame Edifferent
-    end; nra.
+  intros Hp Hq; eapply derive_post with (post := p_eq
+    (PProb (c_and (clock_mode c late) (eqn (var retries_v) (num (S j))))) (PConst 1)).
+  - replace 1 with (p*1+(1-p)*q*1+rho p q*1) by (unfold rho; ring).
+    apply (attempt_exact _ _ p q true true true Hp Hq);
+      intros w Hw; destruct late; unfold timed_inner, clock_mode in Hw |- *;
+      attempt_arithmetic w Hw.
   - intros ps Hps H; apply unit_of_probability_one; assumption.
 Qed.
 
@@ -1333,26 +1389,15 @@ Lemma upper_unit {D} m k (beta gamma : CFormula D) body regions solution exits t
     (PFLe (PProb gamma) (PConst (solution k))).
 Proof.
   intros Hk Hcover Hbody Hsol. set (y := prob_logic_var "upper_mass").
-  change (hoare_derivable
-    (subst_prob_pformula y (PConst 1) (p_concentrated_unit (c_and beta (regions k))))
-    (CWhile beta body) (PFLe (PProb gamma) (PConst (solution k)))).
-  eapply (HElimv (p_concentrated_unit (c_and beta (regions k)))
-    (PFLe (PProb gamma) (PConst (solution k))) y (PConst 1) (CWhile beta body));
-    [|cbn; tauto|cbn; tauto].
-  eapply derive_post with (post := p_and
-    (PFLe (PProb gamma) (PMul (PConst (solution k)) (PVar y)))
-    (p_eq (PVar y) (PConst 1))).
-  - apply HAnd.
-    + eapply derive_pre; [|exact (HWhileUpper m k beta gamma body regions solution exits
-        transitions y Hk Hcover Hbody Hsol)].
-      intros ps Hps H; apply psatisfies_and in H; destruct H as [HU Hy].
-      apply psatisfies_and in HU; destruct HU as [Hs Hm].
-      apply psatisfies_eq in Hm, Hy. apply psatisfies_and; split; [exact Hs|].
-      cbn in Hm, Hy |- *; lra.
-    + eapply derive_pre; [|apply HFree; cbn; tauto].
-      intros ps Hps H; apply psatisfies_and in H; tauto.
-  - intros ps Hps H; apply psatisfies_and in H; destruct H as [H Hy].
-    apply psatisfies_eq in Hy; cbn in H, Hy |- *; nra.
+  with_unit_mass (p_concentrated_unit (c_and beta (regions k))) (CWhile beta body)
+    (PFLe (PProb gamma) (PConst (solution k)))
+    (PFLe (PProb gamma) (PMul (PConst (solution k)) (PVar y))) y.
+  eapply derive_pre; [|exact (HWhileUpper m k beta gamma body regions solution exits
+    transitions y Hk Hcover Hbody Hsol)].
+  intros ps Hps H; apply psatisfies_and in H; destruct H as [HU Hy].
+  apply psatisfies_and in HU; destruct HU as [Hs Hm].
+  apply psatisfies_eq in Hm, Hy. apply psatisfies_and; split; [exact Hs|].
+  cbn in Hm, Hy |- *; lra.
 Qed.
 
 Definition retry_zero := eqn (var retries_v) (num 0).
@@ -1393,34 +1438,22 @@ Lemma attempt_first_upper_row K p q : 0<=p<1 -> 0<=q<1 ->
   hoare_derivable (p_concentrated_unit (c_and (inner_guard K) retry_zero))
     (attempt p q) (p_eq (PProb (c_and (c_not (inner_guard K)) first_ack)) (PConst (rho p q))).
 Proof.
-  intros Hp Hq; apply loop_free_exact; [apply attempt_loop_free; lra|].
-  intros ps Hps HU.
-  remember (mass ps (eqn (var seq_v) (var exp_v))) as same eqn:Esame.
-  remember (mass ps (c_not (eqn (var seq_v) (var exp_v)))) as different eqn:Edifferent.
-  pose proof (unit_partition_sum ps _ (eqn (var seq_v) (var exp_v)) Hps HU) as Hpart.
-  rewrite <-Esame, <-Edifferent in Hpart.
-  cbn [attempt preterm lift_preterm subst_dom_pterm subst_bool_pterm toss_pterm
-    condition_pterm pterm_eval].
-  unfold retry_zero in HU.
-  evaluate_timing ps (c_and (inner_guard K) (eqn (var retries_v) (num 0)))
-    Hps HU same different Esame Edifferent.
-  unfold rho; nra.
+  intros Hp Hq.
+  replace (rho p q) with (p*0+(1-p)*q*0+rho p q*1) by ring.
+  apply (attempt_exact _ _ p q false false true Hp Hq);
+    intros w Hw; unfold retry_zero, first_ack in Hw |- *;
+    attempt_arithmetic w Hw.
 Qed.
 
 Lemma attempt_not_first K p q : 0<=p<1 -> 0<=q<1 ->
   hoare_derivable (p_concentrated_unit (c_and (inner_guard K) (c_not retry_zero)))
     (attempt p q) (p_eq (PProb (c_and (c_not (inner_guard K)) first_ack)) (PConst 0)).
 Proof.
-  intros Hp Hq; apply loop_free_exact; [apply attempt_loop_free; lra|].
-  intros ps Hps HU.
-  remember (mass ps (eqn (var seq_v) (var exp_v))) as same eqn:Esame.
-  remember (mass ps (c_not (eqn (var seq_v) (var exp_v)))) as different eqn:Edifferent.
-  cbn [attempt preterm lift_preterm subst_dom_pterm subst_bool_pterm toss_pterm
-    condition_pterm pterm_eval].
-  unfold retry_zero in HU.
-  evaluate_timing ps (c_and (inner_guard K) (c_not (eqn (var retries_v) (num 0))))
-    Hps HU same different Esame Edifferent.
-  ring.
+  intros Hp Hq.
+  replace 0 with (p*0+(1-p)*q*0+rho p q*0) by ring.
+  apply (attempt_exact _ _ p q false false false Hp Hq);
+    intros w Hw; unfold retry_zero, first_ack in Hw |- *;
+    attempt_arithmetic w Hw.
 Qed.
 
 Lemma derive_upper_one {D} pre cmd (A : CFormula D) :
@@ -1547,12 +1580,7 @@ Ltac timing_setup :=
   apply psatisfies_eq in HA, HB.
 
 Ltac finish_timing_normalize ps Hps HS support pivot :=
-  remember (mass ps pivot) as same eqn:Esame;
-  remember (mass ps (c_not pivot)) as different eqn:Edifferent;
-  pose proof (unit_partition_sum ps _ pivot Hps HS) as Hpart;
-  rewrite <-Esame, <-Edifferent in Hpart;
-  cbn [finish_chunk preterm lift_preterm subst_dom_pterm subst_bool_pterm condition_pterm pterm_eval];
-  evaluate_timing ps support Hps HS same different Esame Edifferent.
+  finish_event ps Hps HS support pivot ltac:(fun H => timing_arithmetic H).
 
 Lemma finish_slow K N c p q : (c<N)%nat ->
   hoare_derivable (timed_post K N c true p q) finish_chunk
@@ -1561,7 +1589,7 @@ Proof.
   intro Hc; apply loop_free_exact; [apply finish_loop_free|].
   timing_setup.
   finish_timing_normalize ps Hps HS (timing_support K N c true) (chunk_ack K N c).
-  change (mass ps (chunk_ack K N c)=sigma K p q) in HA; rewrite <-Esame in HA; lra.
+  exact HA.
 Qed.
 
 Lemma finish_fast K N c p q : (c<N)%nat ->
@@ -1571,7 +1599,7 @@ Proof.
   intro Hc; apply loop_free_exact; [apply finish_loop_free|].
   timing_setup; apply psatisfies_eq in HE.
   finish_timing_normalize ps Hps HS (timing_support K N c false) first_ack.
-  change (mass ps first_ack=rho p q) in HE; rewrite <-Esame in HE; lra.
+  exact HE.
 Qed.
 
 Lemma finish_late K N c p q : (c<N)%nat ->
@@ -1593,7 +1621,7 @@ Proof.
     change (mass ps (chunk_ack K N c)=sigma K p q) in HA.
     change (mass ps first_ack=rho p q) in HE; lra. }
   finish_timing_normalize ps Hps HS (timing_support K N c false) (late_ack K N c).
-  lra.
+  exact HL.
 Qed.
 
 Lemma timed_chunk_rule K N c late p q post : (0<K)%nat -> 0<=p<1 -> 0<=q<1 ->
