@@ -14,8 +14,6 @@ RejectionSampling.v
 Uniform.v
 gamblersruin.v
 mpc.v
-SensorFusion.v
-BatchTransfer.v
 
 TPHL/AnalysisPrelude.v
 TPHL/CoinLaw.v
@@ -57,3 +55,5 @@ TPHL/Completeness/WeakestPreterm.v
 TPHL/Examples/Lib.v
 TPHL/Examples/PrAtoms.v
 TPHL/Examples/AbstractGamblersRuin.v
+TPHL/Examples/BatchTransfer.v
+TPHL/Examples/SensorFusion.v

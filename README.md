@@ -22,7 +22,7 @@ The project file already lists the sources; do not add `*.v` to the generation
 command. To compile selected examples with the same build:
 
 ```sh
-make BatchTransfer.vo SensorFusion.vo
+make TPHL/Examples/BatchTransfer.vo TPHL/Examples/SensorFusion.vo
 ```
 
 If selecting an existing toolchain explicitly, pass `COQBIN=/path/to/bin/` to
@@ -30,12 +30,12 @@ If selecting an existing toolchain explicitly, pass `COQBIN=/path/to/bin/` to
 
 The two new examples use the proof system in `TPHL/PHL.v`:
 
-- `BatchTransfer.v`: `BatchTransfer.batch_transfer` proves exact batch success
+- `TPHL/Examples/BatchTransfer.v`: `BatchTransfer.batch_transfer` proves exact batch success
   and both receiver-safety assertions over `nat_domain`, for every `K` and `N`.
   `BatchTransferTiming.batch_transfer_fast` proves the fast-path probability
   under `K > 0`. Here `K` counts total attempts. The unqualified fast-path
   claim is false when `K = 0` and `N > 0`.
-- `SensorFusion.v`: `SensorFusion.sensor_fusion` proves preservation of
+- `TPHL/Examples/SensorFusion.v`: `SensorFusion.sensor_fusion` proves preservation of
   independence, exact marginals, the alarm rate, and conditional independence
   on the input class `a ∧ b`, over any domain. The proof uses explicit loop
   certificates, SUM and ELIMV to combine input classes, and SEQ, AND and CONS
