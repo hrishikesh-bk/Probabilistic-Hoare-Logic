@@ -31,7 +31,7 @@ Definition blvar_eqb (x y : BoolLogicVar) : bool :=
 
 Definition op_eqb (o1 o2 : NatOp) : bool :=
   match o1, o2 with
-  | NAdd, NAdd | NSub, NSub | NMul, NMul | NMod, NMod => true
+  | NAdd, NAdd | NSub, NSub | NMul, NMul | NMod, NMod | NDiv, NDiv => true
   | _, _ => false
   end.
 Definition rel_eqb (r1 r2 : NatRel) : bool :=

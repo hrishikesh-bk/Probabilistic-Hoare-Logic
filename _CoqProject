@@ -53,3 +53,7 @@ TPHL/Completeness/LoopRules.v
 TPHL/Completeness/StructuralRules.v
 TPHL/Completeness/WeakestPrecondition.v
 TPHL/Completeness/WeakestPreterm.v
+
+TPHL/Examples/Lib.v
+TPHL/Examples/PrAtoms.v
+TPHL/Examples/AbstractGamblersRuin.v

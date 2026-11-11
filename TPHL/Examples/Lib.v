@@ -33,6 +33,12 @@ Definition t_add (t1 t2 : Term) : Term := TOp (D := nat_domain) NAdd t1 t2.
 Definition t_sub (t1 t2 : Term) : Term := TOp (D := nat_domain) NSub t1 t2.
 Definition t_mul (t1 t2 : Term) : Term := TOp (D := nat_domain) NMul t1 t2.
 Definition t_mod (t1 t2 : Term) : Term := TOp (D := nat_domain) NMod t1 t2.
+Definition t_div (t1 t2 : Term) : Term := TOp (D := nat_domain) NDiv t1 t2.
+
+Lemma term_eval_div t1 t2 v :
+  term_eval (t_div t1 t2) v = Nat.div (term_eval t1 v) (term_eval t2 v).
+Proof. reflexivity. Qed.
+
 Definition c_le (t1 t2 : Term) : CFormula := FRel (D := nat_domain) NLe t1 t2.
 Definition c_eq (t1 t2 : Term) : CFormula := FRel (D := nat_domain) NEq t1 t2.
 Definition c_lt (t1 t2 : Term) : CFormula := FRel (D := nat_domain) NLt t1 t2.
@@ -74,6 +80,7 @@ Notation "x + y" := (t_add x y) (in custom tcf at level 50, left associativity) 
 Notation "x - y" := (t_sub x y) (in custom tcf at level 50, left associativity) : tphl_scope.
 Notation "x * y" := (t_mul x y) (in custom tcf at level 40, left associativity) : tphl_scope.
 Notation "x 'mod' y" := (t_mod x y) (in custom tcf at level 40, left associativity) : tphl_scope.
+Notation "x 'div' y" := (t_div x y) (in custom tcf at level 40, left associativity) : tphl_scope.
 Notation "x <= y" := (c_le x y) (in custom tcf at level 60, no associativity) : tphl_scope.
 Notation "x < y" := (c_lt x y) (in custom tcf at level 60, no associativity) : tphl_scope.
 Notation "x = y" := (c_eq x y) (in custom tcf at level 60, no associativity) : tphl_scope.

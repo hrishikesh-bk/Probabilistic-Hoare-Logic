@@ -36,6 +36,7 @@ Completeness/LoopCertificate.v
 Completeness/FiniteCompleteness.v
 Examples/Lib.v
 Examples/PrAtoms.v
+Examples/AbstractGamblersRuin.v
 Examples/KRoll.v
 Examples/RejectionSampling.v
 Examples/CommonCause.v

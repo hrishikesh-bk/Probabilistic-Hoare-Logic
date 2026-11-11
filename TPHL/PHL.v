@@ -1050,7 +1050,7 @@ End ProofSystem.
 (** * The natural-number domain used by the examples *)
 (* ================================================================== *)
 
-Inductive NatOp : Type := NAdd | NSub | NMul | NMod.
+Inductive NatOp : Type := NAdd | NSub | NMul | NMod | NDiv.
 Inductive NatRel : Type := NLe | NEq | NLt.
 
 Definition nat_op_eval (o : NatOp) (a b : nat) : nat :=
@@ -1059,6 +1059,7 @@ Definition nat_op_eval (o : NatOp) (a b : nat) : nat :=
   | NSub => a - b
   | NMul => a * b
   | NMod => Nat.modulo a b
+  | NDiv => Nat.div a b
   end.
 
 Definition nat_rel_eval (r : NatRel) (a b : nat) : bool :=
