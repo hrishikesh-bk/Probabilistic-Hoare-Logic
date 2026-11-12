@@ -2,18 +2,6 @@
 -Q TPHL ""
 
 Maps.v
-PHLTest.v
-CommonCause.v
-CondSamples.v
-EscapingSpline.v
-Herman.v
-ObliviousTransfer.v
-OneTimePad.v
-RandomWalk.v
-RejectionSampling.v
-Uniform.v
-gamblersruin.v
-mpc.v
 
 TPHL/AnalysisPrelude.v
 TPHL/CoinLaw.v
