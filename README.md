@@ -32,13 +32,24 @@ Everything is in `TPHL/`.
 
 ### Option 1: a dedicated opam switch (exact versions)
 
-From `TPHL/`:
+With opam installed and initialized, run the following commands from
+`TPHL/`. These create a dedicated switch, enable the repository containing
+the required Rocq libraries, and install the exact package versions recorded
+in `toolchain.export`.
 
 ```sh
 opam switch create "$PWD/.toolchain" --empty
+opam repository add coq-released \
+  https://coq.inria.fr/opam/released \
+  --switch "$PWD/.toolchain"
 opam switch import toolchain.export --switch "$PWD/.toolchain"
 ./build.sh
 ```
+
+The `coq-released` repository must be enabled for this switch before the
+import: it provides required packages including MathComp, MathComp-Analysis,
+and Hierarchy Builder. Importing `toolchain.export` does not automatically
+add this repository.
 
 `build.sh` compiles every file listed in `_CoqProject`, in order, with the
 switch in `TPHL/.toolchain` (set `TPHL_SWITCH=/path/to/switch` to use another
