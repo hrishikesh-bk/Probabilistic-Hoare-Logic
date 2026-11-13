@@ -59,7 +59,7 @@ Ltac free_side :=
 
 Theorem MPCMain (k1 l1 l2 p : nat) :
   (p > 0)%nat -> (k1 >= 0)%nat -> (l1 >= 0)%nat -> (l2 >= 0)%nat ->
-  (k1 < p)%nat -> (l1 < p)%nat -> (l2 < p)%nat ->
+  (k1 <= p)%nat -> (l1 <= p)%nat -> (l2 <= p)%nat ->
   hoare_derivable {{ (prob true) = 1 }}
     <{ (r11 roll p); ((r12 roll p); (r13 := ((x1 - r11 - r12) mod #((p + 1)%nat)))) }>
     (Q k1 l1 l2).
@@ -104,7 +104,7 @@ Ltac assign_frame H :=
 
 (** The other parties' share generation does not touch party 1's variables. *)
 Theorem MPCSub (k1 l1 l2 p : nat) (ri1 ri2 ri3 xi : DomProgramVar) :
-  (p > 0)%nat -> (k1 < p)%nat -> (l1 < p)%nat -> (l2 < p)%nat ->
+  (p > 0)%nat -> (k1 <= p)%nat -> (l1 <= p)%nat -> (l2 <= p)%nat ->
   NoDup [ri1; ri2; ri3; xi] -> ~ In ri1 MainVars -> ~ In ri2 MainVars ->
   ~ In ri3 MainVars -> ~ In xi MainVars ->
   hoare_derivable (Q k1 l1 l2)
@@ -131,7 +131,7 @@ Proof. intros _ H. assign_frame H. Qed.
 
 Theorem MPCFull (k1 l1 l2 p : nat) :
   (p > 0)%nat -> (k1 >= 0)%nat -> (l1 >= 0)%nat -> (l2 >= 0)%nat ->
-  (k1 < p)%nat -> (l1 < p)%nat -> (l2 < p)%nat ->
+  (k1 <= p)%nat -> (l1 <= p)%nat -> (l2 <= p)%nat ->
   hoare_derivable {{ (prob true) = 1 }}
     <{ ((r11 roll p); ((r12 roll p); (r13 := ((x1 - r11 - r12) mod #((p + 1)%nat)))));
        ((r21 roll p); ((r22 roll p); (r23 := ((x2 - r21 - r22) mod #((p + 1)%nat)))));
