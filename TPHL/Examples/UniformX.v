@@ -1,10 +1,8 @@
 (** A sampler for the escaping spline, built from fair coins, and the proof
     that it meets [SamplerSpec.sampler_spec].
 
-    The old [EscapingSpline.v] assumed the spec as axioms about a program
-    that did not satisfy them.  Following the paper (App. "Escaping Spline"
-    and "Uniform Distribution"), the sampler draws [val] uniformly from
-    [{0, ..., x}] by rejection, with the bound [x] a program variable:
+    The sampler draws [val] uniformly from [{0, ..., x}] by rejection, with
+    the bound [x] a program variable:
 
       val := x + 1;
       while (x + 1 <= val) do
@@ -15,13 +13,18 @@
     The inner loop draws [x + 1] fair bits, so [val] is uniform on
     [[0, 2^(x+1))]; the outer loop rejects [val > x].
 
-    Proof outline, for [x = k]:
-    - [inner_point]: the inner loop ends with [val = j] with probability
-      [1/2^(k+1)], for each [j < 2^(k+1)].  Both while rules, with the chain
-      of regions "ct = k - i and val holds the first k - i bits of j".
-    - [inner_below]: summing, [val < J] with probability [J/2^(k+1)].
-    - The outer loop is a one-region rejection loop, as [uniform_k] in
-      [Uniform.v]. *)
+    Proof outline, for [x = k] (only [HWhileLower] is used):
+    - [body_step]: one inner iteration, derived rule by rule.
+    - [inner_point]: the inner loop ends with [val = j] with probability at
+      least [1/2^(k+1)], for each [j < 2^(k+1)], with the chain of regions
+      "ct = k - i and val holds the first k - i bits of j".
+    - [inner_range]: summing, [a <= val < a + n] with probability at least
+      [n/2^(k+1)].
+    - [outer_lb], [sampler_lb]: the outer loop is a one-region rejection
+      loop; lower bounds for [val = 0], [val <> 0] and [x = k].
+    - [sampler_correct]: postconditions hold over sub-probability states
+      ([Pr(true) <= 1]), so lower bounds on disjoint events summing to 1
+      are equalities. *)
 From Stdlib Require Import Reals Lra Lia Strings.String Lists.List Arith.PeanoNat Setoid.
 Require Import PHL Examples.Lib Examples.PrAtoms Examples.SamplerSpec Examples.EscapingSpline.
 Require Import Soundness.StateFacts Soundness.AssertionFacts.

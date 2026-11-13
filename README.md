@@ -2,11 +2,7 @@
 
 A formalization of logic TPHL from research paper 'A Complete Truth-functional Probabilistic Hoare Logic', along with proofs of example propbabilistic programs as discussed in the paper.
 
-The formalization is implemented in Rocq Theorem prover. The code was tested on Rocq-version 8.19.2. 
-
-File PHLTest contains the formalisation of TPHL along with small illustrative examples.
-To run the code, first compile PHLTest.v followed by Uniform.v (EscapingSpline.v and RandomWalk.v depend on Uniform.v). 
-Now you can step through any of the files. In our test, all files were proved completely.
+The formalization is implemented in the Rocq theorem prover (tested with Rocq 9.0, MathComp 2.6.0 and MathComp-Analysis 1.18.0). It is in the `TPHL` folder: the logic and its semantics in `TPHL/PHL.v`, soundness in `TPHL/Soundness`, completeness in `TPHL/Completeness`, and the example programs in `TPHL/Examples`.
 
 All examples and the `TPHL` library use the same `_CoqProject` and `Makefile`.
 Use a Rocq environment with the project's MathComp, MathComp Analysis, and
@@ -65,4 +61,4 @@ and the `*_valid_rates` corollaries identify the paper's valid-rate fragment.
 This does not formalize EPPL assertion provability or an arbitrary-arity syntax.
 
 References:
-Maps.v is taken from the Software Foundations book (https://softwarefoundations.cis.upenn.edu). Required as a dependency in PHLTest.v. 
+Maps.v is taken from the Software Foundations book (https://softwarefoundations.cis.upenn.edu). 

@@ -1,8 +1,6 @@
 (** Specification of the sampler used by the escaping spline.
 
-    The old [EscapingSpline.v] assumed three axioms about its sampler
-    [uniform_xplus1]; the main one was false for the program it named.  Here
-    the three properties are a definition: [sampler_spec S] says that, started
+    [sampler_spec S] says that, started
     with all mass on [x = k], the command [S] sets [val] to 0 with probability
     [1/(k+1)], to a non-zero value with probability [1 - 1/(k+1)], and leaves
     [x = k] with all the mass.  [UniformX.v] proves it for a concrete sampler

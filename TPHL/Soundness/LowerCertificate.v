@@ -3,15 +3,12 @@
     the progress condition, every post-fixed point [x <= Q(x)] lies below every
     pre-fixed point [l >= Q(l)].
 
-    The argument is a maximum-difference argument instead of the paper's
-    matrix powers: if [d = x - l] had a positive maximum [M], the least index
+    The argument is a maximum-difference argument: if [d = x - l] had a positive maximum [M], the least index
     attaining it would have to move all its mass to indices also attaining
     [M], and progress says one of them is smaller.
 
-    Rows are only constrained on a set [N] of "live" indices.  In the
-    application [N] holds of the nonempty regions: a body triple whose
-    precondition is unsatisfiable carries no information, so the paper's row
-    bound [sum_j q_ij + q_i <= 1] is only available on nonempty regions. *)
+    Rows are only constrained on a set [N] of "live" indices; in the
+    application [N] holds of the nonempty regions. *)
 From Stdlib Require Import Reals Lra Lia Wf_nat.
 From mathcomp Require boolp.
 Require Import PHL.

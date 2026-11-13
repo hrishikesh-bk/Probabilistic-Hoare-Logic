@@ -8,10 +8,7 @@
     [x] is a post-fixed point, and the progress condition makes the system
     transient, so [x <= l] by [post_fixed_below_pre_fixed]
     (LowerCertificate.v).  Integrating over a measure concentrated on
-    [gamma_k] gives the rule.
-
-    Unlike App. C, row bounds [sum_j q_ij + q_i <= 1] are only derived for
-    nonempty regions: for an empty region the body triple is vacuous. *)
+    [gamma_k] gives the rule. *)
 From Stdlib Require Import Reals Lra Lia.
 From HB Require Import structures.
 From mathcomp Require Import boot order ssralg ssrnum interval_inference.

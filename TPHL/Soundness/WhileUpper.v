@@ -6,8 +6,7 @@
     is an induction on [n] using the one-step bounds of the body triples, the
     covering condition, and the pre-fixed-point inequalities.  Integrating
     over a measure concentrated on [beta /\ gamma_k] gives the rule.  The
-    side condition [0 <= x_i] (missing from the old PHLTest formalization) is
-    used in the base case and to multiply the transition bounds. *)
+    side condition [0 <= x_i] is used in the base case and to multiply the transition bounds. *)
 From Stdlib Require Import Reals Lra.
 From HB Require Import structures.
 From mathcomp Require Import boot order ssralg ssrnum interval_inference.

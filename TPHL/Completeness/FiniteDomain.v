@@ -5,8 +5,7 @@
     variables, the classes of [V] are the formulas [gamma_a] fixing the value
     of every variable in [V]; they partition the valuations.
 
-    Unlike App. D, [V] contains the logic variables as well as the program
-    variables: a class must decide every variable that the loop and the
+    [V] contains the logic variables as well as the program variables: a class must decide every variable that the loop and the
     target formula [gamma] read, and [gamma] may mention logic variables. *)
 From Stdlib Require Import List Bool Reals Lra Lia FunctionalExtensionality Permutation.
 From mathcomp Require boolp.

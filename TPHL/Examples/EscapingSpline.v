@@ -1,4 +1,4 @@
-(** The escaping spline (ported from the old [EscapingSpline.v]).
+(** The escaping spline.
 
     [x := 1; while 1 <= x do (Smp; if val = 0 then x := 0 else x := x + 1)],
     where the sampler [Smp] sets [val] to 0 with probability [1/(x+1)].
@@ -6,29 +6,13 @@
     [1 - 1/(n+1)] for every [n > 0] ([Espline_term]), by [W^LB] with the [n]
     regions [x = 1], ..., [x = n].
 
-    Differences from the old file:
-    - The old file assumed three axioms about its sampler [uniform_xplus1]
-      ([uniform], [uniform_neg], [x_inv]); the main one is false for that
-      program.  Here the sampler is a section variable [Smp] with the
-      hypothesis [HS : sampler_spec Smp] (see [SamplerSpec.v]); after the
-      section every theorem is generic in [Smp] and [HS].  Nothing is assumed
-      globally.
-    - The proofs apply the same rules, with the same intermediate assertions,
-      as the old proofs. Old [eliminate_y] with premise [{eta /\ y = p}] is
-      [HInstantiate] applied to that premise.  Regions are [x = n - i] for
-      [i < n], starting from region [n - 1] ([x = 1]), as in the old
-      [G_vector]; the vector helpers ([G_vector], [T_vector], [P_vector],
-      [X_vector] and the lemmas about their entries) become the nat-indexed
-      functions [regions], [exits], [trans], [sol].
-    - The sampler's facts are stated [Pr(...) = 1/(k+1)] (see [SamplerSpec]),
-      so [body1] adds one consequence to flip them.  [Espline_term_int] adds
-      two consequences around [HWhileLower], whose pre- and postcondition
-      have a different shape from the old [HWhileLB2].
-    - [Espline_term_int] drops the old auxiliary arguments [btemp], [tempA]
-      (and their defining equations), which only matched the old rule's
-      syntax.
-    - Pre/postconditions written as Coq functions of the state are now
-      formulas; [prob (k = x)] is written [prob (x = k)]. *)
+    The sampler is a section variable [Smp] with the hypothesis
+    [HS : sampler_spec Smp] (see [SamplerSpec.v]); after the section every
+    theorem is generic in [Smp] and [HS].  Nothing is assumed globally.
+    Regions are [x = n - i] for [i < n], starting from region [n - 1]
+    ([x = 1]); the regions, transitions, exits and solution are the
+    nat-indexed functions [regions], [trans], [exits], [sol].  Logic
+    variables are removed with [HInstantiate]. *)
 From Stdlib Require Import Reals Lra Lia Strings.String Lists.List Arith.PeanoNat.
 Require Import PHL Examples.Lib Examples.PrAtoms Examples.SamplerSpec.
 Require Import Soundness.StateFacts Soundness.AssertionFacts Completeness.StructuralRules.
@@ -396,9 +380,7 @@ Proof.
     + apply (ifthen_void k k1 H1 H2).
 Qed.
 
-(** [uniform], [uniform_neg] and [x_inv] of the old file are the fields of
-    [sampler_spec]; they state [Pr(...) = 1/(k+1)] rather than
-    [1/(k+1) = Pr(...)]. *)
+(** The body uses the three fields of [sampler_spec]. *)
 Theorem body0 (k : nat) :
   hoare_derivable {{ (prob (x = k)) = 1 /\ (prob (x = k)) = (prob true) }}
     body {{ #(p k) = (prob (x = #(0%nat))) }}.
@@ -439,16 +421,15 @@ Qed.
 
 (** ** The while rule *)
 
-(** Region [i] is [x = n - i] (the old [G_vector n] lists [x = n, ..., 1]). *)
+(** Region [i] is [x = n - i]. *)
 Definition regions (n i : nat) : CFormula := \{ x = #((n - i)%nat) \}.
 
 (** From [x = n - i] the body moves to [x = n - i + 1] (region [i - 1]) with
-    [1 - 1/(n-i+1)] (the old [P_vector]) and exits into [x = 0] with
-    [1/(n-i+1)] (the old [T_vector]). *)
+    [1 - 1/(n-i+1)] and exits into [x = 0] with [1/(n-i+1)]. *)
 Definition trans (n i j : nat) : R := if Nat.eqb (S j) i then 1 - p (n - i) else 0.
 Definition exits (n i : nat) : R := p (n - i).
 
-(** The solution [1 - (n-i)/(n+1)] (the old [X_vector]). *)
+(** The solution [1 - (n-i)/(n+1)]. *)
 Definition sol (n i : nat) : R := 1 - INR (n - i) / (INR n + 1).
 
 Lemma helper1 n : while_regions_in_guard n guard (regions n).
@@ -460,7 +441,7 @@ Proof. unfold while_regions_disjoint, cformula_valid, regions. intros i j Hi Hj.
 Lemma helper3 n : while_progress n (trans n) (exits n).
 Proof. intros i Hi. left. apply p_pos. Qed.
 
-(** The body premise of [W^LB] for region [i] (the old [helper4]): [body1]
+(** The body premise of [W^LB] for region [i]: [body1]
     for the next region, [bodyvoid] for the others, [body0] for the exit. *)
 Lemma helper4 n i : (i < n)%nat ->
   hoare_derivable (p_concentrated_unit (regions n i)) body
@@ -514,7 +495,7 @@ Proof.
     split; lra.
 Qed.
 
-(** The solution at [x = 1], region [n - 1] (the old [helper6]). *)
+(** The solution at [x = 1], region [n - 1]. *)
 Lemma helper6 n : (n > 0)%nat -> sol n (n - 1) = 1 - 1 / (INR n + 1).
 Proof. intros Hn. unfold sol. replace (n - (n - 1))%nat with 1%nat by lia. cbn [INR]. reflexivity. Qed.
 
@@ -528,9 +509,9 @@ Theorem Espline_term_int (n : nat) : (n > 0)%nat ->
     {{ #(1 - 1 / (INR n + 1)) * y1 <= (prob (x = #(0%nat))) }}.
 Proof.
   intros Hn.
-  (* The old proof applies [HWhileLB2] directly; TPHL's rule states its
-     pre- and postcondition as [box (beta /\ G_k) /\ y <= Pr(true)] and
-     [x_k * y <= Pr(gamma)], hence the two consequences. *)
+  (* [HWhileLower] states its pre- and postcondition as
+     [box (beta /\ G_k) /\ y <= Pr(true)] and [x_k * y <= Pr(gamma)],
+     hence the two consequences. *)
   eapply HConseqRight; [|eapply HConseqLeft;
     [|apply (HWhileLower n (n - 1) guard \{ x = #(0%nat) \} body (regions n) (sol n)
              (exits n) (trans n) y1)]].
